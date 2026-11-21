@@ -1,8 +1,138 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Default: Biru (Light) */
+:root {
+  --theme-accent: #1d4ed8;
+  --theme-accent-hover: #1e40af;
+  --theme-accent-solid: #2563eb;
+  --theme-accent-soft: #eff6ff;
+  --theme-accent-text: #1d4ed8;
+  --theme-accent-border: #93c5fd;
+  --theme-accent-ring: rgba(37, 99, 235, 0.14);
+  --theme-brand-panel: #091326;
+  --theme-canvas: #f8fafc;
+}
+
+.dark {
+  color-scheme: dark;
+  --theme-accent: #2563eb;
+  --theme-accent-hover: #3b82f6;
+  --theme-accent-solid: #3b82f6;
+  --theme-accent-soft: rgba(59, 130, 246, 0.15);
+  --theme-accent-text: #60a5fa;
+  --theme-accent-border: rgba(59, 130, 246, 0.45);
+  --theme-accent-ring: rgba(59, 130, 246, 0.22);
+  --theme-brand-panel: #050c1b;
+  --theme-canvas: #020617;
+}
+
+/* Emerald */
+[data-theme="emerald"] {
+  --theme-accent: #047857;
+  --theme-accent-hover: #065f46;
+  --theme-accent-solid: #059669;
+  --theme-accent-soft: #ecfdf5;
+  --theme-accent-text: #047857;
+  --theme-accent-border: #6ee7b7;
+  --theme-accent-ring: rgba(5, 150, 105, 0.14);
+  --theme-brand-panel: #061c17;
+}
+
+.dark[data-theme="emerald"] {
+  --theme-accent: #059669;
+  --theme-accent-hover: #10b981;
+  --theme-accent-solid: #10b981;
+  --theme-accent-soft: rgba(16, 185, 129, 0.15);
+  --theme-accent-text: #34d399;
+  --theme-accent-border: rgba(16, 185, 129, 0.45);
+  --theme-accent-ring: rgba(16, 185, 129, 0.22);
+  --theme-brand-panel: #041410;
+}
+
+/* Indigo */
+[data-theme="indigo"] {
+  --theme-accent: #4338ca;
+  --theme-accent-hover: #3730a3;
+  --theme-accent-solid: #4f46e5;
+  --theme-accent-soft: #eef2ff;
+  --theme-accent-text: #4338ca;
+  --theme-accent-border: #a5b4fc;
+  --theme-accent-ring: rgba(79, 70, 229, 0.14);
+  --theme-brand-panel: #11102a;
+}
+
+.dark[data-theme="indigo"] {
+  --theme-accent: #4f46e5;
+  --theme-accent-hover: #6366f1;
+  --theme-accent-solid: #6366f1;
+  --theme-accent-soft: rgba(99, 102, 241, 0.16);
+  --theme-accent-text: #818cf8;
+  --theme-accent-border: rgba(99, 102, 241, 0.45);
+  --theme-accent-ring: rgba(99, 102, 241, 0.22);
+  --theme-brand-panel: #0b0a1f;
+}
+
+/* Amber */
+[data-theme="amber"] {
+  --theme-accent: #b45309;
+  --theme-accent-hover: #92400e;
+  --theme-accent-solid: #d97706;
+  --theme-accent-soft: #fffbeb;
+  --theme-accent-text: #b45309;
+  --theme-accent-border: #fcd34d;
+  --theme-accent-ring: rgba(217, 119, 6, 0.16);
+  --theme-brand-panel: #1f150b;
+  --theme-canvas: #faf8f5;
+}
+
+.dark[data-theme="amber"] {
+  --theme-accent: #d97706;
+  --theme-accent-hover: #f59e0b;
+  --theme-accent-solid: #f59e0b;
+  --theme-accent-soft: rgba(245, 158, 11, 0.15);
+  --theme-accent-text: #fbbf24;
+  --theme-accent-border: rgba(245, 158, 11, 0.45);
+  --theme-accent-ring: rgba(245, 158, 11, 0.22);
+  --theme-brand-panel: #140d07;
+  --theme-canvas: #0c0a09;
+}
+
+/* Rose */
+[data-theme="rose"] {
+  --theme-accent: #be123c;
+  --theme-accent-hover: #9f1239;
+  --theme-accent-solid: #e11d48;
+  --theme-accent-soft: #fff1f2;
+  --theme-accent-text: #be123c;
+  --theme-accent-border: #fda4af;
+  --theme-accent-ring: rgba(225, 29, 72, 0.14);
+  --theme-brand-panel: #220a13;
+}
+
+.dark[data-theme="rose"] {
+  --theme-accent: #e11d48;
+  --theme-accent-hover: #f43f5e;
+  --theme-accent-solid: #f43f5e;
+  --theme-accent-soft: rgba(244, 63, 94, 0.16);
+  --theme-accent-text: #fb7185;
+  --theme-accent-border: rgba(244, 63, 94, 0.45);
+  --theme-accent-ring: rgba(244, 63, 94, 0.22);
+  --theme-brand-panel: #16070d;
+}
 
 @theme inline {
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
+  --color-accent: var(--theme-accent);
+  --color-accent-hover: var(--theme-accent-hover);
+  --color-accent-solid: var(--theme-accent-solid);
+  --color-accent-soft: var(--theme-accent-soft);
+  --color-accent-text: var(--theme-accent-text);
+  --color-accent-border: var(--theme-accent-border);
+  --color-accent-ring: var(--theme-accent-ring);
+  --color-brand-panel: var(--theme-brand-panel);
+  --color-canvas: var(--theme-canvas);
 }
 
 @layer base {
@@ -12,7 +142,11 @@
 
   body {
     font-family: var(--font-sans);
-    background-color: #f8fafc;
+    background-color: var(--theme-canvas);
     color: #0f172a;
+  }
+
+  .dark body {
+    color: #f1f5f9;
   }
 }

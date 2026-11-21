@@ -80,21 +80,25 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
           Profil Pengguna
         </h2>
-        <p className="mt-1 text-sm text-slate-600">Informasi akun yang sedang login.</p>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          Informasi akun yang sedang login.
+        </p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="ui-card overflow-hidden p-6">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white sm:h-20 sm:w-20 sm:text-2xl">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent-solid text-xl font-bold text-white sm:h-20 sm:w-20 sm:text-2xl">
             {initials}
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-bold text-slate-900">{profil.nama_lengkap}</h3>
-            <p className="text-sm text-slate-500">@{profil.username}</p>
-            <span className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              {profil.nama_lengkap}
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">@{profil.username}</p>
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
               <Shield className="h-3.5 w-3.5" /> Akun Aktif
             </span>
           </div>
@@ -102,7 +106,7 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="inline-flex min-h-[40px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              className="ui-btn-secondary inline-flex min-h-[40px] items-center gap-2 px-3.5 text-sm font-semibold"
             >
               <Pencil className="h-4 w-4" /> Edit Profil
             </button>
@@ -114,8 +118,8 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
             role="alert"
             className={`mt-4 rounded-lg border p-3 text-sm font-medium ${
               status.type === 'success'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                : 'border-rose-200 bg-rose-50 text-rose-800'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/70 dark:bg-emerald-950/60 dark:text-emerald-200'
+                : 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800/70 dark:bg-rose-950/60 dark:text-rose-200'
             }`}
           >
             {status.msg}
@@ -123,11 +127,14 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
         )}
 
         {editing ? (
-          <form onSubmit={handleSave} className="mt-6 space-y-4 border-t border-slate-100 pt-6">
+          <form
+            onSubmit={handleSave}
+            className="mt-6 space-y-4 border-t border-slate-100 pt-6 dark:border-slate-800"
+          >
             <div>
               <label
                 htmlFor="nama"
-                className="block text-xs font-semibold tracking-wider text-slate-700 uppercase"
+                className="block text-xs font-semibold tracking-wider text-slate-700 uppercase dark:text-slate-300"
               >
                 Nama Lengkap
               </label>
@@ -138,13 +145,13 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
                 maxLength={100}
                 value={nama}
                 onChange={(e) => setNama(e.target.value)}
-                className="mt-1.5 min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 transition-colors focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
+                className="ui-input mt-1.5 min-h-[44px] w-full px-3.5 text-sm"
               />
             </div>
             <div>
               <label
                 htmlFor="email"
-                className="block text-xs font-semibold tracking-wider text-slate-700 uppercase"
+                className="block text-xs font-semibold tracking-wider text-slate-700 uppercase dark:text-slate-300"
               >
                 Email
               </label>
@@ -155,45 +162,49 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
                 maxLength={100}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1.5 min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 transition-colors focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
+                className="ui-input mt-1.5 min-h-[44px] w-full px-3.5 text-sm"
               />
             </div>
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={cancelEdit}
-                className="inline-flex min-h-[42px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="ui-btn-secondary inline-flex min-h-[42px] items-center gap-2 px-4 text-sm font-semibold"
               >
                 <X className="h-4 w-4" /> Batal
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex min-h-[42px] items-center gap-2 rounded-lg bg-blue-700 px-5 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+                className="ui-btn-primary inline-flex min-h-[42px] items-center gap-2 px-5 text-sm font-semibold disabled:opacity-50"
               >
                 <Save className="h-4 w-4" /> {saving ? 'Menyimpan...' : 'Simpan'}
               </button>
             </div>
           </form>
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
-            <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-4">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
-                <User className="h-4 w-4 text-blue-700" /> Nama Lengkap
+          <div className="mt-6 grid grid-cols-1 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2 dark:border-slate-800">
+            <div className="ui-card-subtle p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">
+                <User className="h-4 w-4 text-accent-text" /> Nama Lengkap
               </div>
-              <p className="mt-1 font-semibold text-slate-900">{profil.nama_lengkap}</p>
+              <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                {profil.nama_lengkap}
+              </p>
             </div>
-            <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-4">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
-                <AtSign className="h-4 w-4 text-blue-700" /> Username
+            <div className="ui-card-subtle p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">
+                <AtSign className="h-4 w-4 text-accent-text" /> Username
               </div>
-              <p className="mt-1 font-mono font-semibold text-slate-900">{profil.username}</p>
+              <p className="mt-1 font-mono font-semibold text-slate-900 dark:text-slate-100">
+                {profil.username}
+              </p>
             </div>
-            <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-4 sm:col-span-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
-                <Mail className="h-4 w-4 text-blue-700" /> Email
+            <div className="ui-card-subtle p-4 sm:col-span-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">
+                <Mail className="h-4 w-4 text-accent-text" /> Email
               </div>
-              <p className="mt-1 font-semibold text-slate-900">{profil.email}</p>
+              <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">{profil.email}</p>
             </div>
           </div>
         )}

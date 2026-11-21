@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import './ui-styles.css';
 import AppShell from '@/components/layout/AppShell';
 import UiProvider from '@/components/ui/UiProvider';
 
@@ -28,7 +29,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${plusJakarta.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="id"
+      className={`${plusJakarta.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('siakademik_theme');
+                  var isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  document.documentElement.classList.toggle('dark', isDark);
+                  var accent = localStorage.getItem('siakademik_accent');
+                  var valid = ['blue', 'emerald', 'indigo', 'amber', 'rose'];
+                  document.documentElement.dataset.theme = valid.indexOf(accent) !== -1 ? accent : 'blue';
+                  var style = localStorage.getItem('siakademik_style');
+                  var validStyles = ['modern', 'glass', 'brutal', 'neumorph', 'clay'];
+                  document.documentElement.dataset.style = validStyles.indexOf(style) !== -1 ? style : 'modern';
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="antialiased">
         <UiProvider>
           <AppShell>{children}</AppShell>

@@ -42,16 +42,16 @@ export function useUi(): UiContextValue {
 
 const TOAST_STYLES: Record<ToastType, { box: string; icon: React.ReactNode }> = {
   success: {
-    box: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-    icon: <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />,
+    box: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800/70 dark:bg-emerald-950/90 dark:text-emerald-100',
+    icon: <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />,
   },
   error: {
-    box: 'border-rose-200 bg-rose-50 text-rose-900',
-    icon: <XCircle className="h-5 w-5 shrink-0 text-rose-600" />,
+    box: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800/70 dark:bg-rose-950/90 dark:text-rose-100',
+    icon: <XCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />,
   },
   info: {
-    box: 'border-blue-200 bg-blue-50 text-blue-900',
-    icon: <Info className="h-5 w-5 shrink-0 text-blue-600" />,
+    box: 'border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800/70 dark:bg-blue-950/90 dark:text-blue-100',
+    icon: <Info className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />,
   },
 };
 
@@ -132,7 +132,7 @@ export default function UiProvider({ children }: { children: React.ReactNode }) 
       {/* Modal Konfirmasi */}
       {dialog && (
         <div
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs dark:bg-black/70"
           onClick={() => closeDialog(false)}
         >
           <div
@@ -140,37 +140,44 @@ export default function UiProvider({ children }: { children: React.ReactNode }) 
             aria-modal="true"
             aria-labelledby="confirm-title"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl"
+            className="ui-modal w-full max-w-sm overflow-hidden"
           >
             <div className="flex gap-4 p-6">
               <div
                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
-                  isDanger ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'
+                  isDanger
+                    ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400'
+                    : 'bg-accent-soft text-accent-text'
                 }`}
               >
                 {isDanger ? <AlertTriangle className="h-5 w-5" /> : <Info className="h-5 w-5" />}
               </div>
               <div>
-                <h3 id="confirm-title" className="text-base font-bold text-slate-900">
+                <h3
+                  id="confirm-title"
+                  className="text-base font-bold text-slate-900 dark:text-slate-100"
+                >
                   {dialog.title || 'Konfirmasi'}
                 </h3>
-                <p className="mt-1 text-sm text-slate-600">{dialog.message}</p>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{dialog.message}</p>
               </div>
             </div>
-            <div className="flex justify-end gap-3 bg-slate-50 px-6 py-4">
+            <div className="flex justify-end gap-3 border-t border-slate-200/60 px-6 py-4 dark:border-slate-800">
               <button
                 type="button"
                 autoFocus
                 onClick={() => closeDialog(false)}
-                className="min-h-[40px] rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="ui-btn-secondary min-h-[40px] px-4 text-sm font-semibold"
               >
                 {dialog.cancelText || 'Batal'}
               </button>
               <button
                 type="button"
                 onClick={() => closeDialog(true)}
-                className={`min-h-[40px] rounded-lg px-4 text-sm font-semibold text-white ${
-                  isDanger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'
+                className={`min-h-[40px] px-4 text-sm font-semibold ${
+                  isDanger
+                    ? 'rounded-lg bg-rose-600 text-white hover:bg-rose-700'
+                    : 'ui-btn-primary'
                 }`}
               >
                 {dialog.confirmText || 'Ya, Lanjutkan'}

@@ -82,10 +82,10 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
           Dashboard Akademik
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Ringkasan data mahasiswa dan program studi terkini.
         </p>
       </div>
@@ -94,56 +94,71 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link
           href="/mahasiswa"
-          className="group flex items-center justify-between rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-blue-300 sm:p-6"
+          className="ui-card group flex items-center justify-between p-5 hover:border-accent-border sm:p-6"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-text">
               <Users className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-500">Total Mahasiswa</p>
-              <h3 className="mt-0.5 text-xl font-bold text-slate-900 tabular-nums">
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Total Mahasiswa
+              </p>
+              <h3 className="mt-0.5 text-xl font-bold text-slate-900 tabular-nums dark:text-slate-100">
                 {totalMahasiswa} Mahasiswa
               </h3>
-              <p className="mt-1 text-xs text-slate-500 tabular-nums">
-                Laki-laki: <strong className="font-semibold text-slate-700">{totalLaki}</strong> •
-                Perempuan:{' '}
-                <strong className="font-semibold text-slate-700">{totalPerempuan}</strong>
+              <p className="mt-1 text-xs text-slate-500 tabular-nums dark:text-slate-400">
+                Laki-laki:{' '}
+                <strong className="font-semibold text-slate-700 dark:text-slate-200">
+                  {totalLaki}
+                </strong>{' '}
+                • Perempuan:{' '}
+                <strong className="font-semibold text-slate-700 dark:text-slate-200">
+                  {totalPerempuan}
+                </strong>
               </p>
             </div>
           </div>
-          <ArrowRight className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-700" />
+          <ArrowRight className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-accent-text dark:text-slate-500" />
         </Link>
 
         <Link
           href="/prodi"
-          className="group flex items-center justify-between rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-blue-300 sm:p-6"
+          className="ui-card group flex items-center justify-between p-5 hover:border-accent-border sm:p-6"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
               <GraduationCap className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-500">Program Studi</p>
-              <h3 className="mt-0.5 text-xl font-bold text-slate-900 tabular-nums">
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Program Studi
+              </p>
+              <h3 className="mt-0.5 text-xl font-bold text-slate-900 tabular-nums dark:text-slate-100">
                 {totalProdi} Prodi
               </h3>
-              <p className="mt-1 truncate text-xs text-slate-500">{daftarKodeProdi}</p>
+              <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                {daftarKodeProdi}
+              </p>
             </div>
           </div>
-          <ArrowRight className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-700" />
+          <ArrowRight className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-accent-text dark:text-slate-500" />
         </Link>
       </div>
 
       {/* Distribusi Mahasiswa per Prodi */}
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">
+      <div className="ui-card p-5 sm:p-6">
         <div className="mb-4 flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-blue-700" />
-          <h3 className="text-base font-bold text-slate-900">Distribusi Mahasiswa per Prodi</h3>
+          <BarChart3 className="h-5 w-5 text-accent-text" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            Distribusi Mahasiswa per Prodi
+          </h3>
         </div>
 
         {prodiStats.length === 0 ? (
-          <p className="text-sm text-slate-500">Belum ada program studi terdaftar.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Belum ada program studi terdaftar.
+          </p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {prodiStats.map((prodi) => {
@@ -155,22 +170,24 @@ export default async function DashboardPage() {
               return (
                 <div
                   key={prodi.id}
-                  className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-4"
+                  className="ui-card-subtle p-4"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-md bg-blue-50 px-2.5 py-0.5 font-mono text-xs font-semibold text-blue-700">
+                    <span className="rounded-md bg-accent-soft px-2.5 py-0.5 font-mono text-xs font-semibold text-accent-text">
                       {prodi.kode_prodi}
                     </span>
-                    <span className="text-xs font-medium text-slate-500 tabular-nums">
+                    <span className="text-xs font-medium text-slate-500 tabular-nums dark:text-slate-400">
                       {prodi.jenjang} • {pct}%
                     </span>
                   </div>
-                  <p className="mt-2.5 truncate text-sm font-semibold text-slate-800">
+                  <p className="mt-2.5 truncate text-sm font-semibold text-slate-800 dark:text-slate-200">
                     {prodi.nama_prodi}
                   </p>
-                  <p className="mt-1 text-lg font-bold text-slate-900 tabular-nums">
+                  <p className="mt-1 text-lg font-bold text-slate-900 tabular-nums dark:text-slate-100">
                     {prodi.total_mahasiswa}{' '}
-                    <span className="text-xs font-normal text-slate-500">Mahasiswa</span>
+                    <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+                      Mahasiswa
+                    </span>
                   </p>
                 </div>
               );
@@ -181,14 +198,18 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Distribusi per Angkatan */}
-        <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">
+        <div className="ui-card p-5 sm:p-6">
           <div className="mb-4 flex items-center gap-2">
-            <CalendarDays className="h-5 w-5 text-slate-700" />
-            <h3 className="text-base font-bold text-slate-900">Mahasiswa per Angkatan</h3>
+            <CalendarDays className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              Mahasiswa per Angkatan
+            </h3>
           </div>
 
           {angkatanStats.length === 0 ? (
-            <p className="text-sm text-slate-500">Belum ada data mahasiswa.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Belum ada data mahasiswa.
+            </p>
           ) : (
             <ul className="space-y-3">
               {angkatanStats.map((a) => {
@@ -197,19 +218,22 @@ export default async function DashboardPage() {
                   totalMahasiswa > 0 ? Math.round((Number(a.total) / totalMahasiswa) * 100) : 0;
                 return (
                   <li key={a.angkatan} className="flex items-center gap-3 text-sm">
-                    <span className="w-12 shrink-0 font-mono text-xs font-semibold text-slate-700 tabular-nums">
+                    <span className="w-12 shrink-0 font-mono text-xs font-semibold text-slate-700 tabular-nums dark:text-slate-300">
                       {a.angkatan}
                     </span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                       <div
-                        className="h-full rounded-full bg-blue-600"
+                        className="h-full rounded-full bg-accent-solid"
                         style={{ width: `${width}%` }}
                         role="img"
                         aria-label={`Angkatan ${a.angkatan}: ${a.total} mahasiswa`}
                       />
                     </div>
-                    <span className="w-16 shrink-0 text-right text-xs font-semibold text-slate-900 tabular-nums">
-                      {a.total} <span className="font-normal text-slate-500">({pct}%)</span>
+                    <span className="w-16 shrink-0 text-right text-xs font-semibold text-slate-900 tabular-nums dark:text-slate-100">
+                      {a.total}{' '}
+                      <span className="font-normal text-slate-500 dark:text-slate-400">
+                        ({pct}%)
+                      </span>
                     </span>
                   </li>
                 );
@@ -219,34 +243,48 @@ export default async function DashboardPage() {
         </div>
 
         {/* 5 Mahasiswa Terbaru */}
-        <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">
+        <div className="ui-card p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-blue-700" />
-              <h3 className="text-base font-bold text-slate-900">Mahasiswa Terbaru</h3>
+              <UserPlus className="h-5 w-5 text-accent-text" />
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                Mahasiswa Terbaru
+              </h3>
             </div>
-            <Link href="/mahasiswa" className="text-xs font-semibold text-blue-700 hover:underline">
+            <Link
+              href="/mahasiswa"
+              className="text-xs font-semibold text-accent-text hover:underline"
+            >
               Lihat semua
             </Link>
           </div>
 
           {mahasiswaTerbaru.length === 0 ? (
-            <p className="text-sm text-slate-500">Belum ada data mahasiswa.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Belum ada data mahasiswa.
+            </p>
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
               {mahasiswaTerbaru.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                <li
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">{m.nama}</p>
-                    <p className="font-mono text-xs text-slate-500 tabular-nums">
+                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {m.nama}
+                    </p>
+                    <p className="font-mono text-xs text-slate-500 tabular-nums dark:text-slate-400">
                       {m.nim} • Angkatan {m.angkatan}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <span className="rounded-md bg-blue-50 px-2 py-0.5 font-mono text-xs font-semibold text-blue-700">
+                    <span className="rounded-md bg-accent-soft px-2 py-0.5 font-mono text-xs font-semibold text-accent-text">
                       {m.kode_prodi}
                     </span>
-                    <p className="mt-1 text-[11px] text-slate-500">{formatTanggal(m.created_at)}</p>
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      {formatTanggal(m.created_at)}
+                    </p>
                   </div>
                 </li>
               ))}

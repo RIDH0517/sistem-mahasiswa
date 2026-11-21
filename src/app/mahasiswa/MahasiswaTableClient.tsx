@@ -39,10 +39,10 @@ export interface ProdiOption {
 }
 
 const PRODI_BADGE_STYLES: Record<string, string> = {
-  PTE: 'bg-amber-50 text-amber-800 border-amber-200',
-  PTIK: 'bg-blue-50 text-blue-800 border-blue-200',
-  TE: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  TEKKOM: 'bg-purple-50 text-purple-800 border-purple-200',
+  PTE: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30',
+  PTIK: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30',
+  TE: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30',
+  TEKKOM: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30',
 };
 
 type SortKey = 'nim' | 'nama' | 'kode_prodi' | 'angkatan';
@@ -237,12 +237,12 @@ export default function MahasiswaTableClient({
   const renderSortIcon = (key: SortKey) =>
     sortKey === key ? (
       sortOrder === 'asc' ? (
-        <ArrowUp className="h-3.5 w-3.5 text-blue-700" />
+        <ArrowUp className="h-3.5 w-3.5 text-accent-text" />
       ) : (
-        <ArrowDown className="h-3.5 w-3.5 text-blue-700" />
+        <ArrowDown className="h-3.5 w-3.5 text-accent-text" />
       )
     ) : (
-      <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
+      <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
     );
 
   const handleExportCsv = () => {
@@ -311,10 +311,10 @@ export default function MahasiswaTableClient({
       {/* Header & Aksi Utama */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
             Data Mahasiswa
           </h2>
-          <p className="mt-1 text-sm text-slate-600 tabular-nums">
+          <p className="mt-1 text-sm text-slate-600 tabular-nums dark:text-slate-400">
             Menampilkan {filteredAndSortedData.length} dari {initialData.length} mahasiswa terdaftar.
           </p>
         </div>
@@ -323,7 +323,7 @@ export default function MahasiswaTableClient({
           <button
             type="button"
             onClick={handleExportCsv}
-            className="inline-flex min-h-[42px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            className="ui-btn-secondary inline-flex min-h-[42px] items-center gap-2 px-4 py-2 text-sm font-semibold"
           >
             <Download className="h-4 w-4" />
             <span>Export CSV</span>
@@ -331,7 +331,7 @@ export default function MahasiswaTableClient({
           <button
             type="button"
             onClick={openAddModal}
-            className="inline-flex min-h-[42px] items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-800"
+            className="ui-btn-primary inline-flex min-h-[42px] items-center gap-2 px-4 py-2 text-sm font-semibold"
           >
             <Plus className="h-4 w-4" />
             <span>Tambah Mahasiswa</span>
@@ -340,10 +340,10 @@ export default function MahasiswaTableClient({
       </div>
 
       {/* Panel Kontrol Filter & Pencarian */}
-      <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="ui-card p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
               type="search"
               value={searchQuery}
@@ -352,13 +352,13 @@ export default function MahasiswaTableClient({
                 setCurrentPage(1);
               }}
               placeholder="Cari NIM, nama mahasiswa, atau email..."
-              className="min-h-[42px] w-full rounded-lg border border-slate-300 bg-white pr-3.5 pl-10 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
+              className="ui-input min-h-[42px] w-full pr-3.5 pl-10 text-sm"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="flex items-center gap-2">
-              <Filter className="hidden h-4 w-4 text-slate-400 sm:block" />
+              <Filter className="hidden h-4 w-4 text-slate-400 sm:block dark:text-slate-500" />
               <select
                 value={selectedGender}
                 onChange={(e) => {
@@ -366,7 +366,7 @@ export default function MahasiswaTableClient({
                   setCurrentPage(1);
                 }}
                 aria-label="Filter jenis kelamin"
-                className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 focus:outline-none"
+                className="ui-input min-h-[42px] px-3 py-2 text-sm font-medium"
               >
                 <option value="ALL">Semua Gender</option>
                 <option value="L">Laki-laki (L)</option>
@@ -381,7 +381,7 @@ export default function MahasiswaTableClient({
                 setCurrentPage(1);
               }}
               aria-label="Filter angkatan"
-              className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 focus:outline-none"
+              className="ui-input min-h-[42px] px-3 py-2 text-sm font-medium"
             >
               <option value="ALL">Semua Angkatan</option>
               {angkatanOptions.map((a) => (
@@ -397,7 +397,7 @@ export default function MahasiswaTableClient({
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
                 aria-label="Urutkan berdasarkan"
-                className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 focus:outline-none"
+                className="ui-input min-h-[42px] px-3 py-2 text-sm font-medium"
               >
                 <option value="nim">Urut: NIM</option>
                 <option value="nama">Urut: Nama</option>
@@ -408,7 +408,7 @@ export default function MahasiswaTableClient({
                 type="button"
                 onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
                 aria-label={sortOrder === 'asc' ? 'Urutan naik' : 'Urutan turun'}
-                className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                className="ui-btn-secondary flex h-[42px] w-[42px] items-center justify-center"
               >
                 {sortOrder === 'asc' ? (
                   <ArrowUp className="h-4 w-4" />
@@ -425,7 +425,7 @@ export default function MahasiswaTableClient({
                 setCurrentPage(1);
               }}
               aria-label="Jumlah baris per halaman"
-              className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 focus:outline-none"
+              className="ui-input min-h-[42px] px-3 py-2 text-sm font-medium"
             >
               <option value={10}>10 baris</option>
               <option value={25}>25 baris</option>
@@ -436,7 +436,7 @@ export default function MahasiswaTableClient({
         </div>
 
         {/* Filter Pill Prodi */}
-        <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3.5">
+        <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3.5 dark:border-slate-800">
           {['ALL', ...prodiOptions.map((p) => p.kode_prodi)].map((kode) => {
             const isActive = selectedProdi === kode;
             return (
@@ -449,8 +449,8 @@ export default function MahasiswaTableClient({
                 }}
                 className={`inline-flex min-h-[36px] items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   isActive
-                    ? 'bg-blue-700 text-white'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-accent text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
                 }`}
               >
                 {kode === 'ALL' ? 'Semua Prodi' : kode}
@@ -462,7 +462,7 @@ export default function MahasiswaTableClient({
             <button
               type="button"
               onClick={resetFilters}
-              className="ml-auto inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              className="ml-auto inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>Reset</span>
@@ -473,11 +473,11 @@ export default function MahasiswaTableClient({
 
       {/* Empty State / Data View */}
       {paginatedData.length === 0 ? (
-        <div className="rounded-xl border border-slate-200/80 bg-white px-6 py-12 text-center shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-          <p className="text-base font-semibold text-slate-900">
+        <div className="ui-card px-6 py-12 text-center">
+          <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Data mahasiswa tidak ditemukan
           </p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {hasActiveFilters
               ? 'Coba ubah kata kunci pencarian atau reset filter yang sedang aktif.'
               : 'Belum ada data mahasiswa yang tersimpan.'}
@@ -486,7 +486,7 @@ export default function MahasiswaTableClient({
             <button
               type="button"
               onClick={resetFilters}
-              className="mt-4 inline-flex min-h-[40px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="ui-btn-secondary mt-4 inline-flex min-h-[40px] items-center gap-2 px-4 text-sm font-semibold"
             >
               <RotateCcw className="h-4 w-4" />
               Reset Filter
@@ -500,15 +500,19 @@ export default function MahasiswaTableClient({
             {paginatedData.map((mhs) => (
               <div
                 key={mhs.id}
-                className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                className="ui-card p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-mono text-xs font-semibold text-slate-500 tabular-nums">
+                    <p className="font-mono text-xs font-semibold text-slate-500 tabular-nums dark:text-slate-400">
                       {mhs.nim}
                     </p>
-                    <h3 className="mt-0.5 truncate text-sm font-bold text-slate-900">{mhs.nama}</h3>
-                    <p className="truncate text-xs text-slate-500">{mhs.email}</p>
+                    <h3 className="mt-0.5 truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                      {mhs.nama}
+                    </h3>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                      {mhs.email}
+                    </p>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -517,7 +521,7 @@ export default function MahasiswaTableClient({
                       onClick={() => openEditModal(mhs)}
                       aria-label={`Edit ${mhs.nama}`}
                       title="Edit Mahasiswa"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-blue-700 hover:bg-blue-50"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-accent-text hover:bg-accent-soft dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -526,18 +530,18 @@ export default function MahasiswaTableClient({
                       onClick={() => handleDelete(mhs)}
                       aria-label={`Hapus ${mhs.nama}`}
                       title="Hapus Mahasiswa"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-rose-500/10"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
                   <span
                     className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs font-semibold ${
                       PRODI_BADGE_STYLES[mhs.kode_prodi] ||
-                      'border-slate-200 bg-slate-100 text-slate-700'
+                      'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
                     }`}
                   >
                     {mhs.kode_prodi}
@@ -545,13 +549,13 @@ export default function MahasiswaTableClient({
                   <span
                     className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${
                       mhs.jenis_kelamin === 'L'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-rose-50 text-rose-700'
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
+                        : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
                     }`}
                   >
                     {mhs.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}
                   </span>
-                  <span className="ml-auto text-xs font-medium text-slate-600 tabular-nums">
+                  <span className="ml-auto text-xs font-medium text-slate-600 tabular-nums dark:text-slate-400">
                     Angkatan {mhs.angkatan}
                   </span>
                 </div>
@@ -560,17 +564,17 @@ export default function MahasiswaTableClient({
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] md:block">
+          <div className="ui-card hidden overflow-hidden md:block">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-700">
-                <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold tracking-wider text-slate-600 uppercase">
+              <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+                <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold tracking-wider text-slate-600 uppercase dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
                   <tr>
                     <th className="w-14 px-5 py-3.5">No</th>
                     <th className="px-5 py-3.5">
                       <button
                         type="button"
                         onClick={() => handleSort('nim')}
-                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-700"
+                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-accent-text"
                       >
                         NIM
                         {renderSortIcon('nim')}
@@ -580,7 +584,7 @@ export default function MahasiswaTableClient({
                       <button
                         type="button"
                         onClick={() => handleSort('nama')}
-                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-700"
+                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-accent-text"
                       >
                         Nama Mahasiswa
                         {renderSortIcon('nama')}
@@ -590,7 +594,7 @@ export default function MahasiswaTableClient({
                       <button
                         type="button"
                         onClick={() => handleSort('kode_prodi')}
-                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-700"
+                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-accent-text"
                       >
                         Program Studi
                         {renderSortIcon('kode_prodi')}
@@ -601,7 +605,7 @@ export default function MahasiswaTableClient({
                       <button
                         type="button"
                         onClick={() => handleSort('angkatan')}
-                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-700"
+                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-accent-text"
                       >
                         Angkatan
                         {renderSortIcon('angkatan')}
@@ -610,24 +614,29 @@ export default function MahasiswaTableClient({
                     <th className="px-5 py-3.5 text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {paginatedData.map((mhs, index) => (
-                    <tr key={mhs.id} className="transition-colors hover:bg-slate-50/80">
-                      <td className="px-5 py-3.5 font-medium text-slate-500 tabular-nums">
+                    <tr
+                      key={mhs.id}
+                      className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
+                    >
+                      <td className="px-5 py-3.5 font-medium text-slate-500 tabular-nums dark:text-slate-400">
                         {startIndex + index + 1}
                       </td>
-                      <td className="px-5 py-3.5 font-mono font-semibold text-slate-800 tabular-nums">
+                      <td className="px-5 py-3.5 font-mono font-semibold text-slate-800 tabular-nums dark:text-slate-200">
                         {mhs.nim}
                       </td>
                       <td className="px-5 py-3.5">
-                        <div className="font-semibold text-slate-900">{mhs.nama}</div>
-                        <div className="text-xs text-slate-500">{mhs.email}</div>
+                        <div className="font-semibold text-slate-900 dark:text-slate-100">
+                          {mhs.nama}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{mhs.email}</div>
                       </td>
                       <td className="px-5 py-3.5">
                         <span
                           className={`inline-flex items-center rounded-md border px-2.5 py-0.5 font-mono text-xs font-semibold ${
                             PRODI_BADGE_STYLES[mhs.kode_prodi] ||
-                            'border-slate-200 bg-slate-100 text-slate-700'
+                            'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
                           }`}
                         >
                           {mhs.kode_prodi}
@@ -637,14 +646,14 @@ export default function MahasiswaTableClient({
                         <span
                           className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                             mhs.jenis_kelamin === 'L'
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'bg-rose-50 text-rose-700'
+                              ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
+                              : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
                           }`}
                         >
                           {mhs.jenis_kelamin}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 font-semibold text-slate-700 tabular-nums">
+                      <td className="px-5 py-3.5 font-semibold text-slate-700 tabular-nums dark:text-slate-300">
                         {mhs.angkatan}
                       </td>
                       <td className="px-5 py-3.5 text-right">
@@ -654,7 +663,7 @@ export default function MahasiswaTableClient({
                             onClick={() => openEditModal(mhs)}
                             aria-label={`Edit ${mhs.nama}`}
                             title="Edit Mahasiswa"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-blue-700 transition-colors hover:bg-blue-50"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-accent-text transition-colors hover:bg-accent-soft dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -663,7 +672,7 @@ export default function MahasiswaTableClient({
                             onClick={() => handleDelete(mhs)}
                             aria-label={`Hapus ${mhs.nama}`}
                             title="Hapus Mahasiswa"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 transition-colors hover:bg-rose-50"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 transition-colors hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-rose-500/10"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -680,19 +689,22 @@ export default function MahasiswaTableClient({
 
       {/* Pagination */}
       {totalItems > 0 && (
-        <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white px-5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:flex-row">
-          <p className="text-xs text-slate-600 tabular-nums sm:text-sm">
-            Menampilkan <strong>{startIndex + 1}</strong>–
-            <strong>{Math.min(startIndex + pageSize, totalItems)}</strong> dari{' '}
-            <strong>{totalItems}</strong> data • Halaman <strong>{safeCurrentPage}</strong>/
-            <strong>{totalPages}</strong>
+        <div className="ui-card flex flex-col items-center justify-between gap-3 px-5 py-3 sm:flex-row">
+          <p className="text-xs text-slate-600 tabular-nums sm:text-sm dark:text-slate-400">
+            Menampilkan <strong className="text-slate-900 dark:text-slate-200">{startIndex + 1}</strong>–
+            <strong className="text-slate-900 dark:text-slate-200">
+              {Math.min(startIndex + pageSize, totalItems)}
+            </strong>{' '}
+            dari <strong className="text-slate-900 dark:text-slate-200">{totalItems}</strong> data •
+            Halaman <strong className="text-slate-900 dark:text-slate-200">{safeCurrentPage}</strong>/
+            <strong className="text-slate-900 dark:text-slate-200">{totalPages}</strong>
           </p>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={safeCurrentPage === 1}
-              className="inline-flex min-h-[38px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ui-btn-secondary inline-flex min-h-[38px] items-center gap-1 px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronLeft className="h-4 w-4" /> Sebelumnya
             </button>
@@ -700,7 +712,7 @@ export default function MahasiswaTableClient({
               type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={safeCurrentPage === totalPages}
-              className="inline-flex min-h-[38px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ui-btn-secondary inline-flex min-h-[38px] items-center gap-1 px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               Selanjutnya <ChevronRight className="h-4 w-4" />
             </button>
@@ -711,7 +723,7 @@ export default function MahasiswaTableClient({
       {/* Modal Form Tambah / Edit Mahasiswa */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs dark:bg-black/70"
           onClick={() => setIsModalOpen(false)}
         >
           <div
@@ -719,17 +731,20 @@ export default function MahasiswaTableClient({
             aria-modal="true"
             aria-labelledby="mhs-modal-title"
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xl"
+            className="ui-modal flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden"
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-200/80 px-6 py-4">
-              <h3 id="mhs-modal-title" className="text-lg font-bold text-slate-900">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200/80 px-6 py-4 dark:border-slate-800">
+              <h3
+                id="mhs-modal-title"
+                className="text-lg font-bold text-slate-900 dark:text-slate-100"
+              >
                 {editingItem ? 'Edit Data Mahasiswa' : 'Tambah Mahasiswa Baru'}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
                 aria-label="Tutup modal"
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -737,14 +752,14 @@ export default function MahasiswaTableClient({
 
             <form onSubmit={handleSave} className="space-y-4 overflow-y-auto p-6">
               {formError && (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-800/70 dark:bg-rose-950/60 dark:text-rose-200">
                   {formError}
                 </div>
               )}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                     NIM
                   </label>
                   <input
@@ -752,13 +767,13 @@ export default function MahasiswaTableClient({
                     required
                     value={formData.nim}
                     onChange={(e) => setFormData({ ...formData, nim: e.target.value })}
-                    className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
+                    className="ui-input mt-1.5 min-h-[42px] w-full px-3.5 text-sm"
                     placeholder="Contoh: 5301424099"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                     Angkatan
                   </label>
                   <input
@@ -770,13 +785,13 @@ export default function MahasiswaTableClient({
                     onChange={(e) =>
                       setFormData({ ...formData, angkatan: Number(e.target.value) })
                     }
-                    className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
+                    className="ui-input mt-1.5 min-h-[42px] w-full px-3.5 text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                   Nama Lengkap
                 </label>
                 <input
@@ -784,13 +799,13 @@ export default function MahasiswaTableClient({
                   required
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
+                  className="ui-input mt-1.5 min-h-[42px] w-full px-3.5 text-sm"
                   placeholder="Nama lengkap mahasiswa"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                   Email Mahasiswa
                 </label>
                 <input
@@ -798,14 +813,14 @@ export default function MahasiswaTableClient({
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
+                  className="ui-input mt-1.5 min-h-[42px] w-full px-3.5 text-sm"
                   placeholder="nama@students.ac.id"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                     Jenis Kelamin
                   </label>
                   <select
@@ -816,7 +831,7 @@ export default function MahasiswaTableClient({
                         jenis_kelamin: e.target.value as 'L' | 'P',
                       })
                     }
-                    className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
+                    className="ui-input mt-1.5 min-h-[42px] w-full px-3.5 text-sm"
                   >
                     <option value="L">Laki-laki (L)</option>
                     <option value="P">Perempuan (P)</option>
@@ -824,7 +839,7 @@ export default function MahasiswaTableClient({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
+                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                     Program Studi
                   </label>
                   <select
@@ -832,7 +847,7 @@ export default function MahasiswaTableClient({
                     onChange={(e) =>
                       setFormData({ ...formData, prodi_id: Number(e.target.value) })
                     }
-                    className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
+                    className="ui-input mt-1.5 min-h-[42px] w-full px-3.5 text-sm"
                   >
                     {prodiOptions.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -843,18 +858,18 @@ export default function MahasiswaTableClient({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+              <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="ui-btn-secondary min-h-[42px] px-4 text-sm font-semibold"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="min-h-[42px] rounded-lg bg-blue-700 px-5 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+                  className="ui-btn-primary min-h-[42px] px-5 text-sm font-semibold disabled:opacity-50"
                 >
                   {submitting ? 'Menyimpan...' : 'Simpan Data'}
                 </button>
