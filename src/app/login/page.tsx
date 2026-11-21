@@ -17,6 +17,10 @@ import {
   ArrowRight,
   Loader2,
   RefreshCw,
+  BookOpen,
+  Award,
+  Database,
+  Layers,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 
@@ -135,6 +139,38 @@ export default function LoginPage() {
               background: 'radial-gradient(circle, rgba(56, 189, 248, 0.18) 0%, transparent 70%)',
             }}
           />
+
+          {/* Elemen Akademik Melayang (Ikon, Shape & Teks) */}
+          <span className="login-drift-d absolute top-[23%] left-6 text-6xl font-extrabold tracking-tight text-white/[0.035] select-none xl:text-7xl">
+            SiAkademik
+          </span>
+
+          <div className="login-spin-slow absolute top-[14%] -right-12 h-64 w-64 rounded-full border border-dashed border-white/[0.09]">
+            <span className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-accent-solid shadow-[0_0_14px_var(--theme-accent-solid)]" />
+            <span className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-white/40" />
+          </div>
+
+          <div className="login-drift-c absolute top-[38%] right-[14%] h-14 w-14 rounded-2xl border border-white/[0.08] bg-white/[0.02]" />
+
+          <div className="login-drift-b absolute top-[18%] right-12 rounded-full border border-white/[0.09] bg-white/[0.035] px-3 py-1 font-mono text-[11px] font-semibold tracking-wider text-white/35 select-none backdrop-blur-xs">
+            PTIK • PTE • TE
+          </div>
+          <div className="login-drift-d absolute right-10 bottom-[13%] rounded-full border border-white/[0.09] bg-white/[0.035] px-3 py-1 font-mono text-[11px] font-semibold tracking-wider text-white/35 select-none backdrop-blur-xs">
+            AKADEMIK • S1
+          </div>
+
+          <div className="login-drift-a absolute top-[26%] right-[18%] flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.1] bg-white/[0.04] text-white/45 backdrop-blur-xs">
+            <BookOpen className="h-5 w-5" />
+          </div>
+          <div className="login-drift-b absolute top-[33%] left-7 flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/40 backdrop-blur-xs">
+            <Award className="h-5 w-5" />
+          </div>
+          <div className="login-drift-c absolute top-[49%] right-8 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.1] bg-white/[0.04] text-white/45 backdrop-blur-xs">
+            <Database className="h-5 w-5" />
+          </div>
+          <div className="login-drift-a absolute bottom-[12%] left-12 flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/35 backdrop-blur-xs">
+            <Layers className="h-4 w-4" />
+          </div>
         </div>
 
         {/* Header Brand */}

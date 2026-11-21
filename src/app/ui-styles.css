@@ -706,6 +706,27 @@
     transform: translateX(300%) skewX(-20deg);
   }
 
+  .login-drift-a {
+    animation: login-drift-a 9s ease-in-out infinite;
+    will-change: transform;
+  }
+  .login-drift-b {
+    animation: login-drift-b 11s ease-in-out infinite;
+    will-change: transform;
+  }
+  .login-drift-c {
+    animation: login-drift-c 13s ease-in-out infinite;
+    will-change: transform;
+  }
+  .login-drift-d {
+    animation: login-drift-d 15s ease-in-out infinite;
+    will-change: transform;
+  }
+  .login-spin-slow {
+    animation: login-spin-slow 38s linear infinite;
+    will-change: transform;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .ui-card,
     .ui-input,
@@ -723,6 +744,11 @@
     .login-emblem,
     .login-bar,
     .login-shake,
+    .login-drift-a,
+    .login-drift-b,
+    .login-drift-c,
+    .login-drift-d,
+    .login-spin-slow,
     .login-badge-shimmer::after {
       animation: none;
     }
@@ -839,4 +865,53 @@ html.theme-fade *::after {
     box-shadow 320ms ease,
     fill 320ms ease,
     stroke 320ms ease !important;
+}
+
+@keyframes login-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-6deg);
+  }
+  50% {
+    transform: translate3d(10px, -14px, 0) rotate(2deg);
+  }
+}
+
+@keyframes login-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(5deg);
+  }
+  50% {
+    transform: translate3d(-12px, 12px, 0) rotate(-3deg);
+  }
+}
+
+@keyframes login-drift-c {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(10deg) scale(1);
+  }
+  50% {
+    transform: translate3d(8px, -12px, 0) rotate(18deg) scale(1.04);
+  }
+}
+
+@keyframes login-drift-d {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-10px, -10px, 0);
+  }
+}
+
+@keyframes login-spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
