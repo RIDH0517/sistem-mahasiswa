@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SESSION_COOKIE_NAME, verifyCsrfToken } from '@/lib/auth';
+import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, verifyCsrfToken } from '@/lib/auth';
 
 export async function POST(request: Request) {
   const isCsrfValid = await verifyCsrfToken(request);
@@ -9,5 +9,6 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({ message: 'Berhasil logout' });
   response.cookies.delete(SESSION_COOKIE_NAME);
+  response.cookies.delete(CSRF_COOKIE_NAME);
   return response;
 }

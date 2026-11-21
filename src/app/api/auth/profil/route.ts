@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { dbErrorCode } from '@/lib/api-validation';
 import { verifyCsrfToken, getSessionUser } from '@/lib/auth';
 
 export async function PUT(request: Request) {
@@ -17,7 +18,10 @@ export async function PUT(request: Request) {
     const email = String(body.email ?? '').trim();
 
     if (!nama || nama.length > 100) {
-      return NextResponse.json({ error: 'Nama lengkap wajib diisi (maks. 100 karakter).' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Nama lengkap wajib diisi (maks. 100 karakter).' },
+        { status: 400 }
+      );
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100) {
       return NextResponse.json({ error: 'Format email tidak valid.' }, { status: 400 });
@@ -29,10 +33,11 @@ export async function PUT(request: Request) {
       session.userId,
     ]);
     return NextResponse.json({ message: 'Profil berhasil diperbarui!' });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.code === 'ER_DUP_ENTRY' ? 'Email sudah dipakai pengguna lain!' : error.message },
-      { status: 400 }
-    );
+  } catch (error: unknown) {
+    if (dbErrorCode(error) === 'ER_DUP_ENTRY') {
+      return NextResponse.json({ error: 'Email sudah dipakai pengguna lain!' }, { status: 400 });
+    }
+    console.error('[api/auth/profil]', error);
+    return NextResponse.json({ error: 'Gagal memperbarui profil.' }, { status: 500 });
   }
 }

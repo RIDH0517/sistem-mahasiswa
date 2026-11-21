@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUi } from '@/components/ui/UiProvider';
+import { fetchCsrfToken } from '@/lib/client-auth';
 import {
   Search,
-  Users,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -16,6 +16,8 @@ import {
   Pencil,
   Trash2,
   Filter,
+  Download,
+  RotateCcw,
 } from 'lucide-react';
 
 export interface MahasiswaRow {
@@ -58,6 +60,7 @@ export default function MahasiswaTableClient({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProdi, setSelectedProdi] = useState<string>('ALL');
   const [selectedGender, setSelectedGender] = useState<string>('ALL');
+  const [selectedAngkatan, setSelectedAngkatan] = useState<string>('ALL');
   const [sortKey, setSortKey] = useState<SortKey>('nim');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -78,10 +81,21 @@ export default function MahasiswaTableClient({
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetch('/api/auth/csrf')
-      .then((r) => r.json())
-      .then((d) => setCsrfToken(d.csrfToken || ''));
+    fetchCsrfToken()
+      .then(setCsrfToken)
+      .catch(() => {
+        // Token akan dimuat ulang saat mutasi jika diperlukan
+      });
   }, []);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsModalOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen]);
 
   const openAddModal = () => {
     setEditingItem(null);
@@ -117,6 +131,7 @@ export default function MahasiswaTableClient({
     setSubmitting(true);
 
     try {
+      const token = csrfToken || (await fetchCsrfToken());
       const method = editingItem ? 'PUT' : 'POST';
       const body = editingItem ? { id: editingItem.id, ...formData } : formData;
 
@@ -124,7 +139,7 @@ export default function MahasiswaTableClient({
         method,
         headers: {
           'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken,
+          'x-csrf-token': token,
         },
         body: JSON.stringify(body),
       });
@@ -152,11 +167,12 @@ export default function MahasiswaTableClient({
     });
     if (!ok) return;
 
+    const token = csrfToken || (await fetchCsrfToken());
     const res = await fetch('/api/mahasiswa', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'x-csrf-token': csrfToken,
+        'x-csrf-token': token,
       },
       body: JSON.stringify({ id: mhs.id }),
     });
@@ -170,6 +186,25 @@ export default function MahasiswaTableClient({
     }
   };
 
+  const angkatanOptions = useMemo(
+    () => Array.from(new Set(initialData.map((m) => m.angkatan))).sort((a, b) => b - a),
+    [initialData]
+  );
+
+  const hasActiveFilters =
+    searchQuery.trim() !== '' ||
+    selectedProdi !== 'ALL' ||
+    selectedGender !== 'ALL' ||
+    selectedAngkatan !== 'ALL';
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setSelectedProdi('ALL');
+    setSelectedGender('ALL');
+    setSelectedAngkatan('ALL');
+    setCurrentPage(1);
+  };
+
   const filteredAndSortedData = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     return initialData
@@ -181,7 +216,8 @@ export default function MahasiswaTableClient({
           mhs.email.toLowerCase().includes(query);
         const matchProdi = selectedProdi === 'ALL' || mhs.kode_prodi === selectedProdi;
         const matchGender = selectedGender === 'ALL' || mhs.jenis_kelamin === selectedGender;
-        return matchSearch && matchProdi && matchGender;
+        const matchAngkatan = selectedAngkatan === 'ALL' || String(mhs.angkatan) === selectedAngkatan;
+        return matchSearch && matchProdi && matchGender && matchAngkatan;
       })
       .sort((a, b) => {
         const valA = a[sortKey];
@@ -190,13 +226,76 @@ export default function MahasiswaTableClient({
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [initialData, searchQuery, selectedProdi, selectedGender, sortKey, sortOrder]);
+  }, [initialData, searchQuery, selectedProdi, selectedGender, selectedAngkatan, sortKey, sortOrder]);
 
   const totalItems = filteredAndSortedData.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (safeCurrentPage - 1) * pageSize;
   const paginatedData = filteredAndSortedData.slice(startIndex, startIndex + pageSize);
+
+  const renderSortIcon = (key: SortKey) =>
+    sortKey === key ? (
+      sortOrder === 'asc' ? (
+        <ArrowUp className="h-3.5 w-3.5 text-blue-700" />
+      ) : (
+        <ArrowDown className="h-3.5 w-3.5 text-blue-700" />
+      )
+    ) : (
+      <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
+    );
+
+  const handleExportCsv = () => {
+    if (filteredAndSortedData.length === 0) {
+      toast('info', 'Tidak ada data untuk diekspor.');
+      return;
+    }
+
+    // Cegah formula injection di Excel (=, +, -, @) dan escape tanda kutip
+    const cell = (value: string | number) => {
+      let text = String(value ?? '');
+      if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+      return '"' + text.replace(/"/g, '""') + '"';
+    };
+
+    const header = [
+      'No',
+      'NIM',
+      'Nama',
+      'Email',
+      'Jenis Kelamin',
+      'Program Studi',
+      'Kode Prodi',
+      'Angkatan',
+    ];
+    const lines = filteredAndSortedData.map((m, i) =>
+      [
+        i + 1,
+        m.nim,
+        m.nama,
+        m.email,
+        m.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan',
+        m.nama_prodi,
+        m.kode_prodi,
+        m.angkatan,
+      ]
+        .map(cell)
+        .join(';')
+    );
+
+    // BOM agar Excel membaca UTF-8; pemisah ";" sesuai Excel regional Indonesia
+    const csv = '\uFEFF' + [header.map(cell).join(';'), ...lines].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `data-mahasiswa-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast('success', `${filteredAndSortedData.length} data mahasiswa berhasil diekspor.`);
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -209,30 +308,40 @@ export default function MahasiswaTableClient({
 
   return (
     <div className="space-y-6">
-      {/* Header & Tombol Tambah */}
+      {/* Header & Aksi Utama */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
             Data Mahasiswa
           </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Menampilkan {filteredAndSortedData.length} dari {initialData.length} Mahasiswa terdaftar.
+          <p className="mt-1 text-sm text-slate-600 tabular-nums">
+            Menampilkan {filteredAndSortedData.length} dari {initialData.length} mahasiswa terdaftar.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="inline-flex min-h-[44px] items-center gap-2 self-start rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-blue-700 sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Tambah Mahasiswa</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="inline-flex min-h-[42px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <Download className="h-4 w-4" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={openAddModal}
+            className="inline-flex min-h-[42px] items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-800"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Tambah Mahasiswa</span>
+          </button>
+        </div>
       </div>
 
       {/* Panel Kontrol Filter & Pencarian */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
@@ -243,20 +352,21 @@ export default function MahasiswaTableClient({
                 setCurrentPage(1);
               }}
               placeholder="Cari NIM, nama mahasiswa, atau email..."
-              className="min-h-[44px] w-full rounded-lg border border-slate-300 bg-slate-50/60 pr-10 pl-10 text-sm text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+              className="min-h-[42px] w-full rounded-lg border border-slate-300 bg-white pr-3.5 pl-10 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-slate-500" />
+              <Filter className="hidden h-4 w-4 text-slate-400 sm:block" />
               <select
                 value={selectedGender}
                 onChange={(e) => {
                   setSelectedGender(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="min-h-[44px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                aria-label="Filter jenis kelamin"
+                className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 focus:outline-none"
               >
                 <option value="ALL">Semua Gender</option>
                 <option value="L">Laki-laki (L)</option>
@@ -265,12 +375,57 @@ export default function MahasiswaTableClient({
             </div>
 
             <select
+              value={selectedAngkatan}
+              onChange={(e) => {
+                setSelectedAngkatan(e.target.value);
+                setCurrentPage(1);
+              }}
+              aria-label="Filter angkatan"
+              className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 focus:outline-none"
+            >
+              <option value="ALL">Semua Angkatan</option>
+              {angkatanOptions.map((a) => (
+                <option key={a} value={String(a)}>
+                  Angkatan {a}
+                </option>
+              ))}
+            </select>
+
+            {/* Kontrol Sort Khusus Mobile */}
+            <div className="flex items-center gap-1.5 md:hidden">
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                aria-label="Urutkan berdasarkan"
+                className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 focus:outline-none"
+              >
+                <option value="nim">Urut: NIM</option>
+                <option value="nama">Urut: Nama</option>
+                <option value="kode_prodi">Urut: Prodi</option>
+                <option value="angkatan">Urut: Angkatan</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                aria-label={sortOrder === 'asc' ? 'Urutan naik' : 'Urutan turun'}
+                className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              >
+                {sortOrder === 'asc' ? (
+                  <ArrowUp className="h-4 w-4" />
+                ) : (
+                  <ArrowDown className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+
+            <select
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="min-h-[44px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+              aria-label="Jumlah baris per halaman"
+              className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 focus:outline-none"
             >
               <option value={10}>10 baris</option>
               <option value={25}>25 baris</option>
@@ -281,7 +436,7 @@ export default function MahasiswaTableClient({
         </div>
 
         {/* Filter Pill Prodi */}
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+        <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3.5">
           {['ALL', ...prodiOptions.map((p) => p.kode_prodi)].map((kode) => {
             const isActive = selectedProdi === kode;
             return (
@@ -292,9 +447,9 @@ export default function MahasiswaTableClient({
                   setSelectedProdi(kode);
                   setCurrentPage(1);
                 }}
-                className={`inline-flex min-h-[38px] items-center rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                className={`inline-flex min-h-[36px] items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   isActive
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-blue-700 text-white'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
@@ -302,124 +457,242 @@ export default function MahasiswaTableClient({
               </button>
             );
           })}
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="ml-auto inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Tabel Data Mahasiswa */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-700">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold tracking-wider text-slate-600 uppercase">
-              <tr>
-                <th className="w-14 px-6 py-4">No</th>
-                <th className="px-6 py-4">
-                  <button
-                    type="button"
-                    onClick={() => handleSort('nim')}
-                    className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-600"
-                  >
-                    NIM
-                    {sortKey === 'nim' ? (
-                      sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
-                    ) : (
-                      <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
-                    )}
-                  </button>
-                </th>
-                <th className="px-6 py-4">
-                  <button
-                    type="button"
-                    onClick={() => handleSort('nama')}
-                    className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-600"
-                  >
-                    Nama Mahasiswa
-                    {sortKey === 'nama' ? (
-                      sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
-                    ) : (
-                      <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
-                    )}
-                  </button>
-                </th>
-                <th className="px-6 py-4">Program Studi</th>
-                <th className="px-6 py-4 text-center">Gender</th>
-                <th className="px-6 py-4">Angkatan</th>
-                <th className="px-6 py-4 text-right">Aksi CRUD</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {paginatedData.map((mhs, index) => (
-                <tr key={mhs.id} className="hover:bg-blue-50/30">
-                  <td className="px-6 py-4 font-medium text-slate-500">
-                    {startIndex + index + 1}
-                  </td>
-                  <td className="px-6 py-4 font-mono font-semibold text-slate-800">
-                    {mhs.nim}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-slate-900">{mhs.nama}</div>
-                    <div className="text-xs text-slate-500">{mhs.email}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-bold ${
-                        PRODI_BADGE_STYLES[mhs.kode_prodi] ||
-                        'border-slate-200 bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {mhs.kode_prodi}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span
-                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                        mhs.jenis_kelamin === 'L'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-rose-100 text-rose-800'
-                      }`}
-                    >
-                      {mhs.jenis_kelamin}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 font-semibold text-slate-700">{mhs.angkatan}</td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(mhs)}
-                        title="Edit Mahasiswa"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-blue-600 hover:bg-blue-50"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(mhs)}
-                        title="Hapus Mahasiswa"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Empty State / Data View */}
+      {paginatedData.length === 0 ? (
+        <div className="rounded-xl border border-slate-200/80 bg-white px-6 py-12 text-center shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <p className="text-base font-semibold text-slate-900">
+            Data mahasiswa tidak ditemukan
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            {hasActiveFilters
+              ? 'Coba ubah kata kunci pencarian atau reset filter yang sedang aktif.'
+              : 'Belum ada data mahasiswa yang tersimpan.'}
+          </p>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="mt-4 inline-flex min-h-[40px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset Filter
+            </button>
+          )}
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Mobile Card View */}
+          <div className="space-y-3 md:hidden">
+            {paginatedData.map((mhs) => (
+              <div
+                key={mhs.id}
+                className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-semibold text-slate-500 tabular-nums">
+                      {mhs.nim}
+                    </p>
+                    <h3 className="mt-0.5 truncate text-sm font-bold text-slate-900">{mhs.nama}</h3>
+                    <p className="truncate text-xs text-slate-500">{mhs.email}</p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(mhs)}
+                      aria-label={`Edit ${mhs.nama}`}
+                      title="Edit Mahasiswa"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-blue-700 hover:bg-blue-50"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(mhs)}
+                      aria-label={`Hapus ${mhs.nama}`}
+                      title="Hapus Mahasiswa"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                  <span
+                    className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs font-semibold ${
+                      PRODI_BADGE_STYLES[mhs.kode_prodi] ||
+                      'border-slate-200 bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    {mhs.kode_prodi}
+                  </span>
+                  <span
+                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${
+                      mhs.jenis_kelamin === 'L'
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'bg-rose-50 text-rose-700'
+                    }`}
+                  >
+                    {mhs.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}
+                  </span>
+                  <span className="ml-auto text-xs font-medium text-slate-600 tabular-nums">
+                    Angkatan {mhs.angkatan}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-700">
+                <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold tracking-wider text-slate-600 uppercase">
+                  <tr>
+                    <th className="w-14 px-5 py-3.5">No</th>
+                    <th className="px-5 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('nim')}
+                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-700"
+                      >
+                        NIM
+                        {renderSortIcon('nim')}
+                      </button>
+                    </th>
+                    <th className="px-5 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('nama')}
+                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-700"
+                      >
+                        Nama Mahasiswa
+                        {renderSortIcon('nama')}
+                      </button>
+                    </th>
+                    <th className="px-5 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('kode_prodi')}
+                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-700"
+                      >
+                        Program Studi
+                        {renderSortIcon('kode_prodi')}
+                      </button>
+                    </th>
+                    <th className="px-5 py-3.5 text-center">Gender</th>
+                    <th className="px-5 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('angkatan')}
+                        className="inline-flex items-center gap-1.5 font-semibold uppercase hover:text-blue-700"
+                      >
+                        Angkatan
+                        {renderSortIcon('angkatan')}
+                      </button>
+                    </th>
+                    <th className="px-5 py-3.5 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedData.map((mhs, index) => (
+                    <tr key={mhs.id} className="transition-colors hover:bg-slate-50/80">
+                      <td className="px-5 py-3.5 font-medium text-slate-500 tabular-nums">
+                        {startIndex + index + 1}
+                      </td>
+                      <td className="px-5 py-3.5 font-mono font-semibold text-slate-800 tabular-nums">
+                        {mhs.nim}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="font-semibold text-slate-900">{mhs.nama}</div>
+                        <div className="text-xs text-slate-500">{mhs.email}</div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          className={`inline-flex items-center rounded-md border px-2.5 py-0.5 font-mono text-xs font-semibold ${
+                            PRODI_BADGE_STYLES[mhs.kode_prodi] ||
+                            'border-slate-200 bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {mhs.kode_prodi}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span
+                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                            mhs.jenis_kelamin === 'L'
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'bg-rose-50 text-rose-700'
+                          }`}
+                        >
+                          {mhs.jenis_kelamin}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 font-semibold text-slate-700 tabular-nums">
+                        {mhs.angkatan}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(mhs)}
+                            aria-label={`Edit ${mhs.nama}`}
+                            title="Edit Mahasiswa"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-blue-700 transition-colors hover:bg-blue-50"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(mhs)}
+                            aria-label={`Hapus ${mhs.nama}`}
+                            title="Hapus Mahasiswa"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 transition-colors hover:bg-rose-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Pagination */}
       {totalItems > 0 && (
-        <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-6 py-3 sm:flex-row">
-          <p className="text-xs text-slate-600 sm:text-sm">
-            Halaman <strong>{safeCurrentPage}</strong> dari <strong>{totalPages}</strong>
+        <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white px-5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:flex-row">
+          <p className="text-xs text-slate-600 tabular-nums sm:text-sm">
+            Menampilkan <strong>{startIndex + 1}</strong>–
+            <strong>{Math.min(startIndex + pageSize, totalItems)}</strong> dari{' '}
+            <strong>{totalItems}</strong> data • Halaman <strong>{safeCurrentPage}</strong>/
+            <strong>{totalPages}</strong>
           </p>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={safeCurrentPage === 1}
-              className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+              className="inline-flex min-h-[38px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronLeft className="h-4 w-4" /> Sebelumnya
             </button>
@@ -427,7 +700,7 @@ export default function MahasiswaTableClient({
               type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={safeCurrentPage === totalPages}
-              className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+              className="inline-flex min-h-[38px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Selanjutnya <ChevronRight className="h-4 w-4" />
             </button>
@@ -437,22 +710,32 @@ export default function MahasiswaTableClient({
 
       {/* Modal Form Tambah / Edit Mahasiswa */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <h3 className="text-lg font-bold text-slate-900">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mhs-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xl"
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200/80 px-6 py-4">
+              <h3 id="mhs-modal-title" className="text-lg font-bold text-slate-900">
                 {editingItem ? 'Edit Data Mahasiswa' : 'Tambah Mahasiswa Baru'}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Tutup modal"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4 p-6">
+            <form onSubmit={handleSave} className="space-y-4 overflow-y-auto p-6">
               {formError && (
                 <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
                   {formError}
@@ -461,7 +744,7 @@ export default function MahasiswaTableClient({
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase">
+                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
                     NIM
                   </label>
                   <input
@@ -469,31 +752,31 @@ export default function MahasiswaTableClient({
                     required
                     value={formData.nim}
                     onChange={(e) => setFormData({ ...formData, nim: e.target.value })}
-                    className="mt-1 min-h-[42px] w-full rounded-lg border border-slate-300 px-3 text-sm"
+                    className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
                     placeholder="Contoh: 5301424099"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase">
+                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
                     Angkatan
                   </label>
                   <input
                     type="number"
                     required
-                    min={2018}
-                    max={2030}
+                    min={2000}
+                    max={2100}
                     value={formData.angkatan}
                     onChange={(e) =>
                       setFormData({ ...formData, angkatan: Number(e.target.value) })
                     }
-                    className="mt-1 min-h-[42px] w-full rounded-lg border border-slate-300 px-3 text-sm"
+                    className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase">
+                <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
                   Nama Lengkap
                 </label>
                 <input
@@ -501,13 +784,13 @@ export default function MahasiswaTableClient({
                   required
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  className="mt-1 min-h-[42px] w-full rounded-lg border border-slate-300 px-3 text-sm"
+                  className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
                   placeholder="Nama lengkap mahasiswa"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase">
+                <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
                   Email Mahasiswa
                 </label>
                 <input
@@ -515,14 +798,14 @@ export default function MahasiswaTableClient({
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="mt-1 min-h-[42px] w-full rounded-lg border border-slate-300 px-3 text-sm"
+                  className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
                   placeholder="nama@students.ac.id"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase">
+                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
                     Jenis Kelamin
                   </label>
                   <select
@@ -533,7 +816,7 @@ export default function MahasiswaTableClient({
                         jenis_kelamin: e.target.value as 'L' | 'P',
                       })
                     }
-                    className="mt-1 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                    className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
                   >
                     <option value="L">Laki-laki (L)</option>
                     <option value="P">Perempuan (P)</option>
@@ -541,7 +824,7 @@ export default function MahasiswaTableClient({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase">
+                  <label className="block text-xs font-semibold tracking-wider text-slate-700 uppercase">
                     Program Studi
                   </label>
                   <select
@@ -549,7 +832,7 @@ export default function MahasiswaTableClient({
                     onChange={(e) =>
                       setFormData({ ...formData, prodi_id: Number(e.target.value) })
                     }
-                    className="mt-1 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                    className="mt-1.5 min-h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
                   >
                     {prodiOptions.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -564,14 +847,14 @@ export default function MahasiswaTableClient({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="min-h-[42px] rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="min-h-[42px] rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="min-h-[42px] rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="min-h-[42px] rounded-lg bg-blue-700 px-5 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
                 >
                   {submitting ? 'Menyimpan...' : 'Simpan Data'}
                 </button>

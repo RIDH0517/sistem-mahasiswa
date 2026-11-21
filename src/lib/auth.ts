@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
+import type { RowDataPacket } from 'mysql2';
 import { db } from '@/lib/db';
 import {
   AUTH_SECRET as SECRET_KEY,
@@ -9,6 +10,12 @@ import {
 
 export { SESSION_COOKIE_NAME };
 export const CSRF_COOKIE_NAME = 'siakademik_csrf_token';
+
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+}
 
 // Hash password dengan SHA-256 (sesuai fungsi SHA2(..., 256) di MySQL)
 export function hashPassword(password: string): string {
@@ -25,27 +32,31 @@ export function generateCsrfToken(): { rawToken: string; signedToken: string } {
   return { rawToken, signedToken: `${rawToken}.${signature}` };
 }
 
-// Verifikasi token CSRF dari Header terhadap HttpOnly Cookie
-export async function verifyCsrfToken(request: Request): Promise<boolean> {
-  const headerToken = request.headers.get('x-csrf-token');
-  const cookieStore = await cookies();
-  const cookieValue = cookieStore.get(CSRF_COOKIE_NAME)?.value;
+// Verifikasi tanda tangan cookie CSRF; kembalikan raw token jika valid
+export function verifySignedCsrfCookie(cookieValue: string | undefined | null): string | null {
+  if (!cookieValue) return null;
+  const parts = cookieValue.split('.');
+  if (parts.length !== 2) return null;
 
-  if (!headerToken || !cookieValue) return false;
+  const [rawCookieToken, cookieSignature] = parts;
+  if (!rawCookieToken || !cookieSignature) return null;
 
-  const [rawCookieToken, cookieSignature] = cookieValue.split('.');
-  if (!rawCookieToken || !cookieSignature) return false;
-
-  // Pastikan token di header sama dengan raw token di cookie
-  if (headerToken !== rawCookieToken) return false;
-
-  // Validasi tanda tangan HMAC agar cookie tidak bisa dipalsukan
   const expectedSignature = crypto
     .createHmac('sha256', SECRET_KEY)
     .update(rawCookieToken)
     .digest('hex');
 
-  return cookieSignature === expectedSignature;
+  return safeEqual(cookieSignature, expectedSignature) ? rawCookieToken : null;
+}
+
+// Verifikasi token CSRF dari Header terhadap HttpOnly Cookie
+export async function verifyCsrfToken(request: Request): Promise<boolean> {
+  const headerToken = request.headers.get('x-csrf-token');
+  const cookieStore = await cookies();
+  const cookieValue = cookieStore.get(CSRF_COOKIE_NAME)?.value;
+  const validRawToken = verifySignedCsrfCookie(cookieValue);
+
+  return Boolean(headerToken && validRawToken && safeEqual(headerToken, validRawToken));
 }
 
 // Buat dan verifikasi Session Cookie
@@ -76,9 +87,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const session = await getSessionUser();
   if (!session) return null;
 
-  const [rows] = await db.query<any[]>(
+  const [rows] = await db.query<RowDataPacket[]>(
     'SELECT id, username, nama_lengkap, email FROM users WHERE id = ? LIMIT 1',
     [session.userId]
   );
-  return rows.length > 0 ? (rows[0] as CurrentUser) : null;
+  return rows.length > 0 ? (rows[0] as unknown as CurrentUser) : null;
 }

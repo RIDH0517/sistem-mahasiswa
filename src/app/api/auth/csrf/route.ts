@@ -4,17 +4,18 @@ import {
   CSRF_COOKIE_NAME,
   generateCsrfToken,
   getSessionUser,
+  verifySignedCsrfCookie,
 } from '@/lib/auth';
 
 export async function GET() {
   const cookieStore = await cookies();
   const existingCookie = cookieStore.get(CSRF_COOKIE_NAME)?.value;
   const sessionUser = await getSessionUser();
+  const existingRawToken = verifySignedCsrfCookie(existingCookie);
 
-  if (existingCookie && existingCookie.includes('.')) {
-    const [rawToken] = existingCookie.split('.');
+  if (existingRawToken) {
     return NextResponse.json({
-      csrfToken: rawToken,
+      csrfToken: existingRawToken,
       authenticated: !!sessionUser,
       user: sessionUser,
     });
@@ -30,6 +31,7 @@ export async function GET() {
   response.cookies.set(CSRF_COOKIE_NAME, signedToken, {
     httpOnly: true,
     sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production',
     path: '/',
   });
 

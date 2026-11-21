@@ -10,9 +10,9 @@ export default function Loading() {
         {[0, 1].map((i) => (
           <div
             key={i}
-            className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-6"
+            className="flex items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-6"
           >
-            <div className="h-12 w-12 rounded-xl bg-slate-200" />
+            <div className="h-12 w-12 shrink-0 rounded-xl bg-slate-200" />
             <div className="flex-1 space-y-2">
               <div className="h-3 w-24 rounded bg-slate-200" />
               <div className="h-5 w-40 rounded bg-slate-200" />
@@ -21,8 +21,8 @@ export default function Loading() {
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="h-12 border-b border-slate-200 bg-slate-50" />
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white">
+        <div className="h-12 border-b border-slate-200/80 bg-slate-50/80" />
         {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className="flex items-center gap-4 border-b border-slate-100 px-6 py-4">
             <div className="h-4 w-8 rounded bg-slate-200" />

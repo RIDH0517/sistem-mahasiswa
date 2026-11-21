@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { RowDataPacket } from 'mysql2';
 import { db } from '@/lib/db';
 import { verifyCsrfToken, getSessionUser, hashPassword } from '@/lib/auth';
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     const oldHash = hashPassword(oldPassword);
-    const [rows] = await db.query<any[]>(
+    const [rows] = await db.query<RowDataPacket[]>(
       'SELECT id FROM users WHERE id = ? AND password_hash = ? LIMIT 1',
       [sessionUser.userId, oldHash]
     );
@@ -65,9 +66,10 @@ export async function POST(request: Request) {
     ]);
 
     return NextResponse.json({ message: 'Password berhasil diperbarui!' });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('[api/auth/ganti-password]', error);
     return NextResponse.json(
-      { error: 'Gagal mengubah password: ' + error.message },
+      { error: 'Gagal mengubah password. Silakan coba lagi.' },
       { status: 500 }
     );
   }

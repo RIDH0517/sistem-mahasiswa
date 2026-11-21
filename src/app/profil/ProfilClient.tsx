@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Mail, Shield, AtSign, Pencil, Save, X } from 'lucide-react';
+import { useUi } from '@/components/ui/UiProvider';
+import { fetchCsrfToken } from '@/lib/client-auth';
 
 export interface ProfilData {
   username: string;
@@ -12,6 +14,7 @@ export interface ProfilData {
 
 export default function ProfilClient({ profil }: { profil: ProfilData }) {
   const router = useRouter();
+  const { toast } = useUi();
   const [csrfToken, setCsrfToken] = useState('');
   const [editing, setEditing] = useState(false);
   const [nama, setNama] = useState(profil.nama_lengkap);
@@ -20,9 +23,11 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch('/api/auth/csrf')
-      .then((r) => r.json())
-      .then((d) => setCsrfToken(d.csrfToken || ''));
+    fetchCsrfToken()
+      .then(setCsrfToken)
+      .catch(() => {
+        // Token akan dimuat ulang saat menyimpan
+      });
   }, []);
 
   const initials =
@@ -38,22 +43,28 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
     setStatus(null);
     setSaving(true);
     try {
+      const token = csrfToken || (await fetchCsrfToken());
       const res = await fetch('/api/auth/profil', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': token },
         body: JSON.stringify({ nama_lengkap: nama, email }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setStatus({ type: 'error', msg: data.error || 'Gagal menyimpan profil.' });
+        const msg = data.error || 'Gagal menyimpan profil.';
+        setStatus({ type: 'error', msg });
+        toast('error', msg);
       } else {
         setStatus({ type: 'success', msg: data.message });
+        toast('success', data.message);
         setEditing(false);
         window.dispatchEvent(new Event('profile-updated'));
         router.refresh();
       }
     } catch {
-      setStatus({ type: 'error', msg: 'Terjadi kesalahan jaringan.' });
+      const msg = 'Terjadi kesalahan jaringan.';
+      setStatus({ type: 'error', msg });
+      toast('error', msg);
     } finally {
       setSaving(false);
     }
@@ -69,13 +80,15 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Profil Pengguna</h2>
-        <p className="text-sm text-slate-600">Informasi akun yang sedang login.</p>
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+          Profil Pengguna
+        </h2>
+        <p className="mt-1 text-sm text-slate-600">Informasi akun yang sedang login.</p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-2xs">
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white sm:h-20 sm:w-20 sm:text-2xl">
             {initials}
           </div>
           <div className="flex-1">
@@ -89,7 +102,7 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="inline-flex min-h-[40px] items-center gap-2 rounded-lg border border-slate-300 px-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="inline-flex min-h-[40px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
             >
               <Pencil className="h-4 w-4" /> Edit Profil
             </button>
@@ -98,6 +111,7 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
 
         {status && (
           <div
+            role="alert"
             className={`mt-4 rounded-lg border p-3 text-sm font-medium ${
               status.type === 'success'
                 ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
@@ -111,7 +125,10 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
         {editing ? (
           <form onSubmit={handleSave} className="mt-6 space-y-4 border-t border-slate-100 pt-6">
             <div>
-              <label htmlFor="nama" className="block text-xs font-semibold text-slate-700 uppercase">
+              <label
+                htmlFor="nama"
+                className="block text-xs font-semibold tracking-wider text-slate-700 uppercase"
+              >
                 Nama Lengkap
               </label>
               <input
@@ -121,11 +138,14 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
                 maxLength={100}
                 value={nama}
                 onChange={(e) => setNama(e.target.value)}
-                className="mt-1 min-h-[42px] w-full rounded-lg border border-slate-300 px-3 text-sm"
+                className="mt-1.5 min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 transition-colors focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
               />
             </div>
             <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-slate-700 uppercase">
+              <label
+                htmlFor="email"
+                className="block text-xs font-semibold tracking-wider text-slate-700 uppercase"
+              >
                 Email
               </label>
               <input
@@ -135,21 +155,21 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
                 maxLength={100}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 min-h-[42px] w-full rounded-lg border border-slate-300 px-3 text-sm"
+                className="mt-1.5 min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 transition-colors focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:outline-none"
               />
             </div>
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={cancelEdit}
-                className="inline-flex min-h-[42px] items-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="inline-flex min-h-[42px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 <X className="h-4 w-4" /> Batal
               </button>
               <button
                 type="submit"
-                disabled={saving || !csrfToken}
-                className="inline-flex min-h-[42px] items-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                disabled={saving}
+                className="inline-flex min-h-[42px] items-center gap-2 rounded-lg bg-blue-700 px-5 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
               >
                 <Save className="h-4 w-4" /> {saving ? 'Menyimpan...' : 'Simpan'}
               </button>
@@ -157,21 +177,21 @@ export default function ProfilClient({ profil }: { profil: ProfilData }) {
           </form>
         ) : (
           <div className="mt-6 grid grid-cols-1 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
-            <div className="rounded-lg bg-slate-50 p-4">
+            <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-4">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
-                <User className="h-4 w-4 text-blue-600" /> Nama Lengkap
+                <User className="h-4 w-4 text-blue-700" /> Nama Lengkap
               </div>
               <p className="mt-1 font-semibold text-slate-900">{profil.nama_lengkap}</p>
             </div>
-            <div className="rounded-lg bg-slate-50 p-4">
+            <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-4">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
-                <AtSign className="h-4 w-4 text-blue-600" /> Username
+                <AtSign className="h-4 w-4 text-blue-700" /> Username
               </div>
-              <p className="mt-1 font-semibold text-slate-900">{profil.username}</p>
+              <p className="mt-1 font-mono font-semibold text-slate-900">{profil.username}</p>
             </div>
-            <div className="rounded-lg bg-slate-50 p-4 sm:col-span-2">
+            <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-4 sm:col-span-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
-                <Mail className="h-4 w-4 text-blue-600" /> Email
+                <Mail className="h-4 w-4 text-blue-700" /> Email
               </div>
               <p className="mt-1 font-semibold text-slate-900">{profil.email}</p>
             </div>
