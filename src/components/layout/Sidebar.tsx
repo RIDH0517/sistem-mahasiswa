@@ -105,7 +105,11 @@ export default function Sidebar({
             isMini ? 'md:justify-center md:px-0' : ''
           }`}
         >
-          <div className="flex items-center gap-3 overflow-hidden">
+          <Link
+            href="/"
+            onClick={onCloseMobile}
+            className="flex items-center gap-3 overflow-hidden rounded-lg focus:outline-none"
+          >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-solid text-sm font-bold text-white">
               SM
             </div>
@@ -116,7 +120,7 @@ export default function Sidebar({
             >
               SiAkademik
             </span>
-          </div>
+          </Link>
 
           <button
             type="button"

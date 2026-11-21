@@ -29,6 +29,21 @@ export function parseId(body: Body): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+export function parseIds(body: Body, maxItems = 500): number[] | null {
+  if (!Array.isArray(body.ids) || body.ids.length === 0 || body.ids.length > maxItems) {
+    return null;
+  }
+
+  const parsed: number[] = [];
+  for (const item of body.ids) {
+    const id = Number(item);
+    if (!Number.isInteger(id) || id <= 0) return null;
+    parsed.push(id);
+  }
+
+  return Array.from(new Set(parsed));
+}
+
 export function validateMahasiswa(body: Body): Result<MahasiswaInput> {
   const nim = str(body.nim);
   const nama = str(body.nama).replace(/\s+/g, ' ');

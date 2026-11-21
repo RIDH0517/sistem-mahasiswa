@@ -13,6 +13,7 @@ import {
   applyColorTheme,
   applyDarkMode,
   applyUiStyle,
+  toggleDarkModeWithTransition,
   isValidColorTheme,
   isValidUiStyle,
   type ColorThemeId,
@@ -62,6 +63,9 @@ export default function ThemeToggle() {
     getStyleSnapshot,
     () => 'modern' as UiStyleId
   );
+
+  const activeStyleLabel =
+    UI_STYLES.find((s) => s.id === activeStyle)?.label ?? 'Modern Flat';
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -125,9 +129,12 @@ export default function ThemeToggle() {
     window.dispatchEvent(new Event(THEME_ACCENT_EVENT));
   };
 
-  const handleToggleMode = () => {
+  const handleToggleMode = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
     const nextIsDark = !document.documentElement.classList.contains('dark');
-    applyDarkMode(nextIsDark);
+    toggleDarkModeWithTransition(nextIsDark, { x, y });
     try {
       localStorage.setItem(THEME_MODE_KEY, nextIsDark ? 'dark' : 'light');
     } catch {
@@ -146,9 +153,10 @@ export default function ThemeToggle() {
           aria-haspopup="true"
           aria-label="Pilih gaya tampilan dan tema warna"
           title="Pilih gaya tampilan & warna"
-          className="ui-btn-secondary inline-flex h-9 items-center gap-1.5 px-2.5"
+          className="ui-btn-secondary inline-flex h-9 items-center gap-1.5 px-2.5 sm:px-3"
         >
           <Palette className="h-4 w-4" aria-hidden="true" />
+          <span className="hidden text-xs font-semibold sm:inline">{activeStyleLabel}</span>
           <span className="h-2.5 w-2.5 rounded-full bg-accent-solid" aria-hidden="true" />
         </button>
 
@@ -222,10 +230,12 @@ export default function ThemeToggle() {
         onClick={handleToggleMode}
         aria-label="Ganti tema tampilan"
         title="Ganti tema Terang / Gelap"
-        className="ui-btn-secondary inline-flex h-9 w-9 items-center justify-center"
+        className="ui-btn-secondary group relative inline-flex h-9 w-9 items-center justify-center"
       >
-        <Sun className="hidden h-4 w-4 dark:block" aria-hidden="true" />
-        <Moon className="h-4 w-4 dark:hidden" aria-hidden="true" />
+        <span className="relative flex h-4 w-4 items-center justify-center" aria-hidden="true">
+          <Sun className="theme-toggle-icon absolute h-4 w-4 scale-0 rotate-90 opacity-0 transition-all duration-300 dark:scale-100 dark:rotate-0 dark:opacity-100 dark:group-hover:rotate-12" />
+          <Moon className="theme-toggle-icon absolute h-4 w-4 scale-100 rotate-0 opacity-100 transition-all duration-300 group-hover:-rotate-12 dark:scale-0 dark:-rotate-90 dark:opacity-0" />
+        </span>
       </button>
     </div>
   );

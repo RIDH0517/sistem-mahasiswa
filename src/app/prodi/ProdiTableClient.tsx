@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUi } from '@/components/ui/UiProvider';
 import { fetchCsrfToken } from '@/lib/client-auth';
@@ -13,6 +14,7 @@ import {
   Trash2,
   X,
   RotateCcw,
+  ArrowUpRight,
 } from 'lucide-react';
 
 export interface ProdiRow {
@@ -123,22 +125,26 @@ export default function ProdiTableClient({
     });
     if (!ok) return;
 
-    const token = csrfToken || (await fetchCsrfToken());
-    const res = await fetch('/api/prodi', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-csrf-token': token,
-      },
-      body: JSON.stringify({ id: prodi.id }),
-    });
+    try {
+      const token = csrfToken || (await fetchCsrfToken());
+      const res = await fetch('/api/prodi', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': token,
+        },
+        body: JSON.stringify({ id: prodi.id }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) {
-      toast('error', data.error || 'Gagal menghapus prodi.');
-    } else {
-      toast('success', data.message || 'Program studi berhasil dihapus.');
-      router.refresh();
+      const data = await res.json();
+      if (!res.ok) {
+        toast('error', data.error || 'Gagal menghapus prodi.');
+      } else {
+        toast('success', data.message || 'Program studi berhasil dihapus.');
+        router.refresh();
+      }
+    } catch {
+      toast('error', 'Terjadi kesalahan jaringan.');
     }
   };
 
@@ -218,6 +224,13 @@ export default function ProdiTableClient({
                   <span>Laki-laki: {prodi.total_laki || 0}</span>
                   <span>Perempuan: {prodi.total_perempuan || 0}</span>
                 </div>
+                <Link
+                  href={`/mahasiswa?prodi=${encodeURIComponent(prodi.kode_prodi)}`}
+                  className="inline-flex items-center gap-1 pt-1 font-semibold text-accent-text hover:underline"
+                >
+                  <span>Lihat mahasiswa</span>
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
             </div>
           );
@@ -285,10 +298,13 @@ export default function ProdiTableClient({
                     <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
                       {prodi.nama_prodi}
                     </p>
-                    <p className="flex items-center gap-1.5 text-xs text-slate-600 tabular-nums dark:text-slate-400">
+                    <Link
+                      href={`/mahasiswa?prodi=${encodeURIComponent(prodi.kode_prodi)}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 tabular-nums transition-colors hover:text-accent-text hover:underline dark:text-slate-400"
+                    >
                       <Users className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                      {prodi.total_mahasiswa} Mahasiswa
-                    </p>
+                      <span>{prodi.total_mahasiswa} Mahasiswa</span>
+                    </Link>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -349,10 +365,13 @@ export default function ProdiTableClient({
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 font-semibold text-slate-900 tabular-nums dark:text-slate-100">
+                        <Link
+                          href={`/mahasiswa?prodi=${encodeURIComponent(prodi.kode_prodi)}`}
+                          className="inline-flex items-center gap-2 font-semibold text-slate-900 tabular-nums transition-colors hover:text-accent-text hover:underline dark:text-slate-100"
+                        >
                           <Users className="h-4 w-4 text-accent-text" />
                           <span>{prodi.total_mahasiswa} Mahasiswa</span>
-                        </div>
+                        </Link>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="inline-flex items-center gap-1.5">

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useUi } from '@/components/ui/UiProvider';
 import { fetchCsrfToken } from '@/lib/client-auth';
 import {
@@ -18,6 +18,7 @@ import {
   Filter,
   Download,
   RotateCcw,
+  CheckSquare,
 } from 'lucide-react';
 
 export interface MahasiswaRow {
@@ -47,6 +48,20 @@ const PRODI_BADGE_STYLES: Record<string, string> = {
 
 type SortKey = 'nim' | 'nama' | 'kode_prodi' | 'angkatan';
 
+const VALID_SORT_KEYS: SortKey[] = ['nim', 'nama', 'kode_prodi', 'angkatan'];
+const VALID_PAGE_SIZES = [10, 25, 50, 100];
+
+interface UrlQueryPatch {
+  q?: string;
+  prodi?: string;
+  gender?: string;
+  angkatan?: string;
+  sort?: SortKey;
+  order?: 'asc' | 'desc';
+  page?: number;
+  size?: number;
+}
+
 export default function MahasiswaTableClient({
   initialData,
   prodiOptions,
@@ -55,16 +70,93 @@ export default function MahasiswaTableClient({
   prodiOptions: ProdiOption[];
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { confirm: confirmDialog, toast } = useUi();
   const [csrfToken, setCsrfToken] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProdi, setSelectedProdi] = useState<string>('ALL');
-  const [selectedGender, setSelectedGender] = useState<string>('ALL');
-  const [selectedAngkatan, setSelectedAngkatan] = useState<string>('ALL');
-  const [sortKey, setSortKey] = useState<SortKey>('nim');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [draftQuery, setDraftQuery] = useState<string | null>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const angkatanOptions = useMemo(
+    () => Array.from(new Set(initialData.map((m) => m.angkatan))).sort((a, b) => b - a),
+    [initialData]
+  );
+
+  const urlQuery = searchParams.get('q') ?? '';
+  const searchQuery = draftQuery ?? urlQuery;
+
+  const prodiParam = (searchParams.get('prodi') ?? '').trim().toUpperCase();
+  const matchedProdi = prodiOptions.find((p) => p.kode_prodi.toUpperCase() === prodiParam);
+  const selectedProdi = matchedProdi ? matchedProdi.kode_prodi : 'ALL';
+
+  const genderParam = (searchParams.get('gender') ?? '').trim().toUpperCase();
+  const selectedGender = genderParam === 'L' || genderParam === 'P' ? genderParam : 'ALL';
+
+  const angkatanParam = (searchParams.get('angkatan') ?? '').trim();
+  const selectedAngkatan = angkatanOptions.some((a) => String(a) === angkatanParam)
+    ? angkatanParam
+    : 'ALL';
+
+  const sortParam = searchParams.get('sort');
+  const sortKey: SortKey = VALID_SORT_KEYS.includes(sortParam as SortKey)
+    ? (sortParam as SortKey)
+    : 'nim';
+  const sortOrder: 'asc' | 'desc' = searchParams.get('order') === 'desc' ? 'desc' : 'asc';
+
+  const pageParam = Number(searchParams.get('page'));
+  const currentPage = Number.isInteger(pageParam) && pageParam >= 1 ? pageParam : 1;
+
+  const sizeParam = Number(searchParams.get('size'));
+  const pageSize = VALID_PAGE_SIZES.includes(sizeParam) ? sizeParam : 10;
+
+  const updateUrlParams = (patch: UrlQueryPatch) => {
+    const baseSearch =
+      typeof window !== 'undefined' ? window.location.search : searchParams.toString();
+    const params = new URLSearchParams(baseSearch);
+
+    if (patch.q !== undefined) {
+      if (patch.q.trim() === '') params.delete('q');
+      else params.set('q', patch.q);
+    }
+    if (patch.prodi !== undefined) {
+      if (patch.prodi === 'ALL') params.delete('prodi');
+      else params.set('prodi', patch.prodi);
+    }
+    if (patch.gender !== undefined) {
+      if (patch.gender === 'ALL') params.delete('gender');
+      else params.set('gender', patch.gender);
+    }
+    if (patch.angkatan !== undefined) {
+      if (patch.angkatan === 'ALL') params.delete('angkatan');
+      else params.set('angkatan', patch.angkatan);
+    }
+    if (patch.sort !== undefined) {
+      if (patch.sort === 'nim') params.delete('sort');
+      else params.set('sort', patch.sort);
+    }
+    if (patch.order !== undefined) {
+      if (patch.order === 'asc') params.delete('order');
+      else params.set('order', patch.order);
+    }
+    if (patch.page !== undefined) {
+      if (patch.page <= 1) params.delete('page');
+      else params.set('page', String(patch.page));
+    }
+    if (patch.size !== undefined) {
+      if (patch.size === 10) params.delete('size');
+      else params.set('size', String(patch.size));
+    }
+
+    const qs = params.toString();
+    const nextUrl = qs ? `${pathname}?${qs}` : pathname;
+    window.history.replaceState(null, '', nextUrl);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
 
   // State Modal CRUD
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -79,6 +171,17 @@ export default function MahasiswaTableClient({
   });
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // State Seleksi Massal
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const existingIdSet = useMemo(() => new Set(initialData.map((m) => m.id)), [initialData]);
+  const activeSelectedIds = useMemo(
+    () => selectedIds.filter((id) => existingIdSet.has(id)),
+    [selectedIds, existingIdSet]
+  );
+  const selectedIdSet = useMemo(() => new Set(activeSelectedIds), [activeSelectedIds]);
 
   useEffect(() => {
     fetchCsrfToken()
@@ -167,29 +270,76 @@ export default function MahasiswaTableClient({
     });
     if (!ok) return;
 
-    const token = csrfToken || (await fetchCsrfToken());
-    const res = await fetch('/api/mahasiswa', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-csrf-token': token,
-      },
-      body: JSON.stringify({ id: mhs.id }),
-    });
+    try {
+      const token = csrfToken || (await fetchCsrfToken());
+      const res = await fetch('/api/mahasiswa', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': token,
+        },
+        body: JSON.stringify({ id: mhs.id }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) {
-      toast('error', data.error || 'Gagal menghapus mahasiswa');
-    } else {
-      toast('success', data.message || 'Mahasiswa berhasil dihapus.');
-      router.refresh();
+      const data = await res.json();
+      if (!res.ok) {
+        toast('error', data.error || 'Gagal menghapus mahasiswa');
+      } else {
+        setSelectedIds((prev) => prev.filter((id) => id !== mhs.id));
+        toast('success', data.message || 'Mahasiswa berhasil dihapus.');
+        router.refresh();
+      }
+    } catch {
+      toast('error', 'Terjadi kesalahan jaringan.');
     }
   };
 
-  const angkatanOptions = useMemo(
-    () => Array.from(new Set(initialData.map((m) => m.angkatan))).sort((a, b) => b - a),
-    [initialData]
-  );
+  const handleBulkDelete = async () => {
+    const selectedRows = initialData.filter((m) => selectedIdSet.has(m.id));
+    if (selectedRows.length === 0) return;
+
+    const previewNames = selectedRows
+      .slice(0, 3)
+      .map((m) => m.nama)
+      .join(', ');
+    const detail =
+      selectedRows.length > 3
+        ? `${previewNames}, dan ${selectedRows.length - 3} mahasiswa lainnya`
+        : previewNames;
+
+    const ok = await confirmDialog({
+      title: `Hapus ${selectedRows.length} Mahasiswa?`,
+      message: `Data ${detail} akan dihapus permanen dan tidak bisa dikembalikan.`,
+      confirmText: `Ya, Hapus (${selectedRows.length})`,
+    });
+    if (!ok) return;
+
+    setBulkDeleting(true);
+    try {
+      const token = csrfToken || (await fetchCsrfToken());
+      const res = await fetch('/api/mahasiswa', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': token,
+        },
+        body: JSON.stringify({ ids: selectedRows.map((m) => m.id) }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast('error', data.error || 'Gagal menghapus mahasiswa terpilih.');
+      } else {
+        setSelectedIds([]);
+        toast('success', data.message || `${selectedRows.length} mahasiswa berhasil dihapus.`);
+        router.refresh();
+      }
+    } catch {
+      toast('error', 'Terjadi kesalahan jaringan.');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   const hasActiveFilters =
     searchQuery.trim() !== '' ||
@@ -198,11 +348,12 @@ export default function MahasiswaTableClient({
     selectedAngkatan !== 'ALL';
 
   const resetFilters = () => {
-    setSearchQuery('');
-    setSelectedProdi('ALL');
-    setSelectedGender('ALL');
-    setSelectedAngkatan('ALL');
-    setCurrentPage(1);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+      searchTimerRef.current = null;
+    }
+    setDraftQuery(null);
+    updateUrlParams({ q: '', prodi: 'ALL', gender: 'ALL', angkatan: 'ALL', page: 1 });
   };
 
   const filteredAndSortedData = useMemo(() => {
@@ -233,6 +384,40 @@ export default function MahasiswaTableClient({
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (safeCurrentPage - 1) * pageSize;
   const paginatedData = filteredAndSortedData.slice(startIndex, startIndex + pageSize);
+
+  const allPageSelected =
+    paginatedData.length > 0 && paginatedData.every((m) => selectedIdSet.has(m.id));
+  const somePageSelected = paginatedData.some((m) => selectedIdSet.has(m.id));
+
+  const toggleSelectOne = (id: number) => {
+    setSelectedIds((prev) => {
+      const validPrev = prev.filter((item) => existingIdSet.has(item));
+      return validPrev.includes(id)
+        ? validPrev.filter((item) => item !== id)
+        : [...validPrev, id];
+    });
+  };
+
+  const toggleSelectPage = () => {
+    const pageIds = paginatedData.map((m) => m.id);
+    setSelectedIds((prev) => {
+      const validPrev = prev.filter((item) => existingIdSet.has(item));
+      if (allPageSelected) {
+        const pageSet = new Set(pageIds);
+        return validPrev.filter((id) => !pageSet.has(id));
+      }
+      return Array.from(new Set([...validPrev, ...pageIds]));
+    });
+  };
+
+  const selectAllFiltered = () => {
+    if (filteredAndSortedData.length > 500) {
+      toast('info', 'Maksimal 500 data dapat dipilih sekaligus.');
+    }
+    setSelectedIds(filteredAndSortedData.slice(0, 500).map((m) => m.id));
+  };
+
+  const clearSelection = () => setSelectedIds([]);
 
   const renderSortIcon = (key: SortKey) =>
     sortKey === key ? (
@@ -299,10 +484,9 @@ export default function MahasiswaTableClient({
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      updateUrlParams({ order: sortOrder === 'asc' ? 'desc' : 'asc' });
     } else {
-      setSortKey(key);
-      setSortOrder('asc');
+      updateUrlParams({ sort: key, order: 'asc' });
     }
   };
 
@@ -348,8 +532,24 @@ export default function MahasiswaTableClient({
               type="search"
               value={searchQuery}
               onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
+                const nextValue = e.target.value;
+                setDraftQuery(nextValue);
+                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                searchTimerRef.current = setTimeout(() => {
+                  searchTimerRef.current = null;
+                  updateUrlParams({ q: nextValue, page: 1 });
+                  setDraftQuery(null);
+                }, 250);
+              }}
+              onBlur={() => {
+                if (draftQuery !== null) {
+                  if (searchTimerRef.current) {
+                    clearTimeout(searchTimerRef.current);
+                    searchTimerRef.current = null;
+                  }
+                  updateUrlParams({ q: draftQuery, page: 1 });
+                  setDraftQuery(null);
+                }
               }}
               placeholder="Cari NIM, nama mahasiswa, atau email..."
               className="ui-input min-h-[42px] w-full pr-3.5 pl-10 text-sm"
@@ -361,10 +561,7 @@ export default function MahasiswaTableClient({
               <Filter className="hidden h-4 w-4 text-slate-400 sm:block dark:text-slate-500" />
               <select
                 value={selectedGender}
-                onChange={(e) => {
-                  setSelectedGender(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => updateUrlParams({ gender: e.target.value, page: 1 })}
                 aria-label="Filter jenis kelamin"
                 className="ui-input min-h-[42px] px-3 py-2 text-sm font-medium"
               >
@@ -376,10 +573,7 @@ export default function MahasiswaTableClient({
 
             <select
               value={selectedAngkatan}
-              onChange={(e) => {
-                setSelectedAngkatan(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => updateUrlParams({ angkatan: e.target.value, page: 1 })}
               aria-label="Filter angkatan"
               className="ui-input min-h-[42px] px-3 py-2 text-sm font-medium"
             >
@@ -395,7 +589,7 @@ export default function MahasiswaTableClient({
             <div className="flex items-center gap-1.5 md:hidden">
               <select
                 value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                onChange={(e) => updateUrlParams({ sort: e.target.value as SortKey })}
                 aria-label="Urutkan berdasarkan"
                 className="ui-input min-h-[42px] px-3 py-2 text-sm font-medium"
               >
@@ -406,7 +600,7 @@ export default function MahasiswaTableClient({
               </select>
               <button
                 type="button"
-                onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                onClick={() => updateUrlParams({ order: sortOrder === 'asc' ? 'desc' : 'asc' })}
                 aria-label={sortOrder === 'asc' ? 'Urutan naik' : 'Urutan turun'}
                 className="ui-btn-secondary flex h-[42px] w-[42px] items-center justify-center"
               >
@@ -420,10 +614,7 @@ export default function MahasiswaTableClient({
 
             <select
               value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
+              onChange={(e) => updateUrlParams({ size: Number(e.target.value), page: 1 })}
               aria-label="Jumlah baris per halaman"
               className="ui-input min-h-[42px] px-3 py-2 text-sm font-medium"
             >
@@ -443,10 +634,7 @@ export default function MahasiswaTableClient({
               <button
                 key={kode}
                 type="button"
-                onClick={() => {
-                  setSelectedProdi(kode);
-                  setCurrentPage(1);
-                }}
+                onClick={() => updateUrlParams({ prodi: kode, page: 1 })}
                 className={`inline-flex min-h-[36px] items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   isActive
                     ? 'bg-accent text-white'
@@ -470,6 +658,58 @@ export default function MahasiswaTableClient({
           )}
         </div>
       </div>
+
+      {/* Toolbar Aksi Massal */}
+      {activeSelectedIds.length > 0 && (
+        <div
+          role="region"
+          aria-label="Aksi massal mahasiswa"
+          className="ui-card flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+        >
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent-text">
+              <CheckSquare className="h-4 w-4" />
+            </span>
+            <p className="text-sm font-semibold text-slate-900 tabular-nums dark:text-slate-100">
+              {activeSelectedIds.length} mahasiswa dipilih
+            </p>
+            {allPageSelected && filteredAndSortedData.length > activeSelectedIds.length && (
+              <button
+                type="button"
+                onClick={selectAllFiltered}
+                disabled={bulkDeleting}
+                className="text-xs font-semibold text-accent-text hover:underline disabled:opacity-50"
+              >
+                Pilih semua {filteredAndSortedData.length} hasil filter
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={bulkDeleting}
+              className="ui-btn-secondary inline-flex min-h-[38px] items-center px-3.5 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg bg-rose-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>
+                {bulkDeleting
+                  ? 'Menghapus...'
+                  : `Hapus Terpilih (${activeSelectedIds.length})`}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Empty State / Data View */}
       {paginatedData.length === 0 ? (
@@ -497,70 +737,104 @@ export default function MahasiswaTableClient({
         <>
           {/* Mobile Card View */}
           <div className="space-y-3 md:hidden">
-            {paginatedData.map((mhs) => (
-              <div
-                key={mhs.id}
-                className="ui-card p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-mono text-xs font-semibold text-slate-500 tabular-nums dark:text-slate-400">
-                      {mhs.nim}
-                    </p>
-                    <h3 className="mt-0.5 truncate text-sm font-bold text-slate-900 dark:text-slate-100">
-                      {mhs.nama}
-                    </h3>
-                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      {mhs.email}
-                    </p>
+            <div className="ui-card flex items-center justify-between px-4 py-2.5">
+              <label className="inline-flex cursor-pointer items-center gap-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  ref={(el) => {
+                    if (el) el.indeterminate = somePageSelected && !allPageSelected;
+                  }}
+                  checked={allPageSelected}
+                  onChange={toggleSelectPage}
+                  disabled={bulkDeleting}
+                  className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-accent dark:border-slate-600"
+                />
+                <span>Pilih halaman ini ({paginatedData.length})</span>
+              </label>
+              {activeSelectedIds.length > 0 && (
+                <span className="rounded-md bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent-text tabular-nums">
+                  {activeSelectedIds.length} dipilih
+                </span>
+              )}
+            </div>
+
+            {paginatedData.map((mhs) => {
+              const isSelected = selectedIdSet.has(mhs.id);
+              return (
+                <div
+                  key={mhs.id}
+                  className={`ui-card p-4 ${isSelected ? 'outline-2 -outline-offset-2 outline-accent-solid' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectOne(mhs.id)}
+                        disabled={bulkDeleting}
+                        aria-label={`Pilih ${mhs.nama}`}
+                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-accent dark:border-slate-600"
+                      />
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs font-semibold text-slate-500 tabular-nums dark:text-slate-400">
+                          {mhs.nim}
+                        </p>
+                        <h3 className="mt-0.5 truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                          {mhs.nama}
+                        </h3>
+                        <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                          {mhs.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(mhs)}
+                        aria-label={`Edit ${mhs.nama}`}
+                        title="Edit Mahasiswa"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-accent-text hover:bg-accent-soft dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(mhs)}
+                        aria-label={`Hapus ${mhs.nama}`}
+                        title="Hapus Mahasiswa"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(mhs)}
-                      aria-label={`Edit ${mhs.nama}`}
-                      title="Edit Mahasiswa"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-accent-text hover:bg-accent-soft dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                    <span
+                      className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs font-semibold ${
+                        PRODI_BADGE_STYLES[mhs.kode_prodi] ||
+                        'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                      }`}
                     >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(mhs)}
-                      aria-label={`Hapus ${mhs.nama}`}
-                      title="Hapus Mahasiswa"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                      {mhs.kode_prodi}
+                    </span>
+                    <span
+                      className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${
+                        mhs.jenis_kelamin === 'L'
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
+                          : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
+                      }`}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      {mhs.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}
+                    </span>
+                    <span className="ml-auto text-xs font-medium text-slate-600 tabular-nums dark:text-slate-400">
+                      Angkatan {mhs.angkatan}
+                    </span>
                   </div>
                 </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-                  <span
-                    className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs font-semibold ${
-                      PRODI_BADGE_STYLES[mhs.kode_prodi] ||
-                      'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                    }`}
-                  >
-                    {mhs.kode_prodi}
-                  </span>
-                  <span
-                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${
-                      mhs.jenis_kelamin === 'L'
-                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
-                        : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
-                    }`}
-                  >
-                    {mhs.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}
-                  </span>
-                  <span className="ml-auto text-xs font-medium text-slate-600 tabular-nums dark:text-slate-400">
-                    Angkatan {mhs.angkatan}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Desktop Table View */}
@@ -569,6 +843,19 @@ export default function MahasiswaTableClient({
               <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
                 <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold tracking-wider text-slate-600 uppercase dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
                   <tr>
+                    <th className="w-12 px-4 py-3.5">
+                      <input
+                        type="checkbox"
+                        ref={(el) => {
+                          if (el) el.indeterminate = somePageSelected && !allPageSelected;
+                        }}
+                        checked={allPageSelected}
+                        onChange={toggleSelectPage}
+                        disabled={bulkDeleting}
+                        aria-label="Pilih semua mahasiswa di halaman ini"
+                        className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-accent dark:border-slate-600"
+                      />
+                    </th>
                     <th className="w-14 px-5 py-3.5">No</th>
                     <th className="px-5 py-3.5">
                       <button
@@ -615,71 +902,90 @@ export default function MahasiswaTableClient({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {paginatedData.map((mhs, index) => (
-                    <tr
-                      key={mhs.id}
-                      className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
-                    >
-                      <td className="px-5 py-3.5 font-medium text-slate-500 tabular-nums dark:text-slate-400">
-                        {startIndex + index + 1}
-                      </td>
-                      <td className="px-5 py-3.5 font-mono font-semibold text-slate-800 tabular-nums dark:text-slate-200">
-                        {mhs.nim}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="font-semibold text-slate-900 dark:text-slate-100">
-                          {mhs.nama}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{mhs.email}</div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`inline-flex items-center rounded-md border px-2.5 py-0.5 font-mono text-xs font-semibold ${
-                            PRODI_BADGE_STYLES[mhs.kode_prodi] ||
-                            'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                          }`}
-                        >
-                          {mhs.kode_prodi}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <span
-                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                            mhs.jenis_kelamin === 'L'
-                              ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
-                              : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
-                          }`}
-                        >
-                          {mhs.jenis_kelamin}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 font-semibold text-slate-700 tabular-nums dark:text-slate-300">
-                        {mhs.angkatan}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(mhs)}
-                            aria-label={`Edit ${mhs.nama}`}
-                            title="Edit Mahasiswa"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-accent-text transition-colors hover:bg-accent-soft dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+                  {paginatedData.map((mhs, index) => {
+                    const isSelected = selectedIdSet.has(mhs.id);
+                    return (
+                      <tr
+                        key={mhs.id}
+                        className={`transition-colors ${
+                          isSelected
+                            ? 'bg-accent-soft/50'
+                            : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
+                        }`}
+                      >
+                        <td className="px-4 py-3.5">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectOne(mhs.id)}
+                            disabled={bulkDeleting}
+                            aria-label={`Pilih ${mhs.nama}`}
+                            className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-accent dark:border-slate-600"
+                          />
+                        </td>
+                        <td className="px-5 py-3.5 font-medium text-slate-500 tabular-nums dark:text-slate-400">
+                          {startIndex + index + 1}
+                        </td>
+                        <td className="px-5 py-3.5 font-mono font-semibold text-slate-800 tabular-nums dark:text-slate-200">
+                          {mhs.nim}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">
+                            {mhs.nama}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            {mhs.email}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span
+                            className={`inline-flex items-center rounded-md border px-2.5 py-0.5 font-mono text-xs font-semibold ${
+                              PRODI_BADGE_STYLES[mhs.kode_prodi] ||
+                              'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            }`}
                           >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(mhs)}
-                            aria-label={`Hapus ${mhs.nama}`}
-                            title="Hapus Mahasiswa"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 transition-colors hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                            {mhs.kode_prodi}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <span
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                              mhs.jenis_kelamin === 'L'
+                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
+                                : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
+                            }`}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {mhs.jenis_kelamin}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 font-semibold text-slate-700 tabular-nums dark:text-slate-300">
+                          {mhs.angkatan}
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(mhs)}
+                              aria-label={`Edit ${mhs.nama}`}
+                              title="Edit Mahasiswa"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-accent-text transition-colors hover:bg-accent-soft dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(mhs)}
+                              aria-label={`Hapus ${mhs.nama}`}
+                              title="Hapus Mahasiswa"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-600 transition-colors hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -702,7 +1008,7 @@ export default function MahasiswaTableClient({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => updateUrlParams({ page: Math.max(1, safeCurrentPage - 1) })}
               disabled={safeCurrentPage === 1}
               className="ui-btn-secondary inline-flex min-h-[38px] items-center gap-1 px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -710,7 +1016,7 @@ export default function MahasiswaTableClient({
             </button>
             <button
               type="button"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => updateUrlParams({ page: Math.min(totalPages, safeCurrentPage + 1) })}
               disabled={safeCurrentPage === totalPages}
               className="ui-btn-secondary inline-flex min-h-[38px] items-center gap-1 px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >

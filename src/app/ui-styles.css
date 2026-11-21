@@ -614,6 +614,98 @@
       inset 0 -3px 6px rgba(0, 0, 0, 0.34);
   }
 
+  /* =========================================================
+     ANIMASI HALAMAN LOGIN
+     ========================================================= */
+  .login-enter {
+    animation: login-fade-up 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .login-delay-1 {
+    animation-delay: 70ms;
+  }
+  .login-delay-2 {
+    animation-delay: 140ms;
+  }
+  .login-delay-3 {
+    animation-delay: 210ms;
+  }
+  .login-delay-4 {
+    animation-delay: 280ms;
+  }
+  .login-delay-5 {
+    animation-delay: 350ms;
+  }
+
+  .login-orb-a {
+    animation: login-float-a 14s ease-in-out infinite;
+    will-change: transform;
+  }
+  .login-orb-b {
+    animation: login-float-b 18s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .login-emblem {
+    animation: login-emblem-bob 4.5s ease-in-out infinite;
+  }
+
+  .login-bar {
+    transform-origin: bottom;
+    animation: login-bar-pulse 2.4s ease-in-out infinite;
+  }
+  .login-bar-1 {
+    animation-delay: 0s;
+  }
+  .login-bar-2 {
+    animation-delay: 0.25s;
+  }
+  .login-bar-3 {
+    animation-delay: 0.5s;
+  }
+  .login-bar-4 {
+    animation-delay: 0.75s;
+  }
+  .login-bar-5 {
+    animation-delay: 1s;
+  }
+
+  .login-shake {
+    animation: login-shake 380ms ease-in-out;
+  }
+
+  .login-badge-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .login-badge-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.24), transparent);
+    transform: translateX(-140%) skewX(-20deg);
+    animation: login-shimmer 5s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .login-btn-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .login-btn-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 42%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
+    transform: translateX(-160%) skewX(-20deg);
+    transition: transform 650ms ease;
+    pointer-events: none;
+  }
+  .login-btn-shine:hover:not(:disabled)::after {
+    transform: translateX(300%) skewX(-20deg);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .ui-card,
     .ui-input,
@@ -625,5 +717,126 @@
     [data-style="brutal"] .ui-btn-secondary:active:not(:disabled) {
       transform: none;
     }
+    .login-enter,
+    .login-orb-a,
+    .login-orb-b,
+    .login-emblem,
+    .login-bar,
+    .login-shake,
+    .login-badge-shimmer::after {
+      animation: none;
+    }
+    .login-btn-shine::after,
+    .theme-toggle-icon {
+      transition: none;
+    }
   }
+}
+
+@keyframes login-fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes login-float-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(24px, 18px, 0) scale(1.06);
+  }
+}
+
+@keyframes login-float-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-22px, -20px, 0) scale(1.08);
+  }
+}
+
+@keyframes login-emblem-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes login-bar-pulse {
+  0%,
+  100% {
+    transform: scaleY(0.45);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes login-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes login-shimmer {
+  0%,
+  72% {
+    transform: translateX(-140%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+html.theme-transitioning::view-transition-old(root),
+html.theme-transitioning::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.theme-transitioning::view-transition-old(root) {
+  z-index: 1;
+}
+
+html.theme-transitioning::view-transition-new(root) {
+  z-index: 9999;
+}
+
+html.theme-transitioning .theme-toggle-icon {
+  transition: none !important;
+}
+
+html.theme-fade *,
+html.theme-fade *::before,
+html.theme-fade *::after {
+  transition:
+    background-color 320ms ease,
+    color 320ms ease,
+    border-color 320ms ease,
+    box-shadow 320ms ease,
+    fill 320ms ease,
+    stroke 320ms ease !important;
 }

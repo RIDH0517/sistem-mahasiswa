@@ -5,6 +5,43 @@ import { KeyRound, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { fetchCsrfToken } from '@/lib/client-auth';
 import { useUi } from '@/components/ui/UiProvider';
 
+function getPasswordStrength(password: string) {
+  if (password.length < 6) {
+    return {
+      score: 1,
+      label: 'Terlalu Pendek',
+      bar: 'bg-rose-500',
+      text: 'text-rose-600 dark:text-rose-400',
+    };
+  }
+
+  let checks = 1;
+  if (password.length >= 10) checks += 1;
+  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) checks += 1;
+  if (/\d/.test(password) && /[^A-Za-z0-9]/.test(password)) {
+    checks += 1;
+  } else if (/\d/.test(password) || /[^A-Za-z0-9]/.test(password)) {
+    checks += password.length >= 8 ? 1 : 0;
+  }
+
+  const score = Math.min(4, Math.max(1, checks));
+  if (score <= 1) {
+    return { score: 1, label: 'Lemah', bar: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400' };
+  }
+  if (score === 2) {
+    return { score: 2, label: 'Cukup', bar: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' };
+  }
+  if (score === 3) {
+    return { score: 3, label: 'Kuat', bar: 'bg-blue-500', text: 'text-blue-600 dark:text-blue-400' };
+  }
+  return {
+    score: 4,
+    label: 'Sangat Kuat',
+    bar: 'bg-emerald-500',
+    text: 'text-emerald-600 dark:text-emerald-400',
+  };
+}
+
 export default function GantiPasswordPage() {
   const { toast } = useUi();
   const [oldPassword, setOldPassword] = useState('');
@@ -24,6 +61,8 @@ export default function GantiPasswordPage() {
         // Token akan dimuat ulang jika diperlukan
       });
   }, []);
+
+  const strength = getPasswordStrength(newPassword);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +191,27 @@ export default function GantiPasswordPage() {
               {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Minimal 6 karakter.</p>
+          {newPassword.length > 0 ? (
+            <div className="mt-2 space-y-1.5">
+              <div className="grid grid-cols-4 gap-1.5" aria-hidden="true">
+                {[1, 2, 3, 4].map((step) => (
+                  <div
+                    key={step}
+                    className={`h-1.5 rounded-full transition-colors ${
+                      step <= strength.score
+                        ? strength.bar
+                        : 'bg-slate-200 dark:bg-slate-800'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className={`text-xs font-medium ${strength.text}`}>
+                Kekuatan password: {strength.label}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Minimal 6 karakter.</p>
+          )}
         </div>
 
         <div>
@@ -187,6 +246,19 @@ export default function GantiPasswordPage() {
               {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+          {confirmPassword.length > 0 && (
+            <p
+              className={`mt-1.5 text-xs font-medium ${
+                newPassword === confirmPassword
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-rose-600 dark:text-rose-400'
+              }`}
+            >
+              {newPassword === confirmPassword
+                ? 'Password baru cocok'
+                : 'Konfirmasi password belum cocok'}
+            </p>
+          )}
         </div>
 
         <button

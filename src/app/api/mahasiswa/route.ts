@@ -6,6 +6,7 @@ import {
   dbErrorCode,
   guardRequest,
   parseId,
+  parseIds,
   readBody,
   validateMahasiswa,
 } from '@/lib/api-validation';
@@ -65,13 +66,40 @@ export async function PUT(request: Request) {
   }
 }
 
-// DELETE Mahasiswa
+// DELETE Mahasiswa (tunggal via { id } atau massal via { ids })
 export async function DELETE(request: Request) {
   const denied = await guardRequest(request);
   if (denied) return denied;
 
   const body = await readBody(request);
-  const id = body ? parseId(body) : null;
+  if (!body) return badRequest('Body request tidak valid.');
+
+  if ('ids' in body) {
+    const ids = parseIds(body);
+    if (!ids) {
+      return badRequest('Daftar ID mahasiswa tidak valid (minimal 1, maksimal 500 data).');
+    }
+
+    try {
+      const placeholders = ids.map(() => '?').join(', ');
+      const [result] = await db.query<ResultSetHeader>(
+        `DELETE FROM mahasiswa WHERE id IN (${placeholders})`,
+        ids
+      );
+      if (result.affectedRows === 0) {
+        return badRequest('Data mahasiswa tidak ditemukan.', 404);
+      }
+      return NextResponse.json({
+        deletedCount: result.affectedRows,
+        message: `${result.affectedRows} data mahasiswa berhasil dihapus!`,
+      });
+    } catch (e) {
+      console.error('[api/mahasiswa]', e);
+      return badRequest('Gagal menghapus data mahasiswa terpilih.', 500);
+    }
+  }
+
+  const id = parseId(body);
   if (!id) return badRequest('ID mahasiswa tidak valid.');
 
   try {

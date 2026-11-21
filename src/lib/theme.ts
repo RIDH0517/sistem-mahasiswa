@@ -55,3 +55,83 @@ export function applyUiStyle(id: UiStyleId): void {
 export function applyDarkMode(isDark: boolean): void {
   document.documentElement.classList.toggle('dark', isDark);
 }
+
+interface ViewTransitionLike {
+  ready: Promise<void>;
+  finished: Promise<void>;
+}
+
+type DocumentWithViewTransition = Document & {
+  startViewTransition?: (callback: () => void) => ViewTransitionLike;
+};
+
+let activeTransitionId = 0;
+let fadeTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function toggleDarkModeWithTransition(
+  nextIsDark: boolean,
+  origin?: { x: number; y: number }
+): void {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    applyDarkMode(nextIsDark);
+    return;
+  }
+
+  const doc = document as DocumentWithViewTransition;
+  const root = document.documentElement;
+
+  if (typeof doc.startViewTransition === 'function') {
+    const x = origin?.x ?? window.innerWidth / 2;
+    const y = origin?.y ?? window.innerHeight / 2;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const id = ++activeTransitionId;
+    root.classList.add('theme-transitioning');
+
+    const transition = doc.startViewTransition(() => {
+      applyDarkMode(nextIsDark);
+    });
+
+    transition.ready
+      .then(() => {
+        root.animate(
+          {
+            clipPath: [
+              `circle(0px at ${x}px ${y}px)`,
+              `circle(${endRadius}px at ${x}px ${y}px)`,
+            ],
+          },
+          {
+            duration: 520,
+            easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+      })
+      .catch(() => {
+        // Abaikan AbortError saat transisi digantikan klik baru
+      });
+
+    transition.finished
+      .catch(() => {
+        // Abaikan AbortError saat transisi digantikan klik baru
+      })
+      .finally(() => {
+        if (activeTransitionId === id) {
+          root.classList.remove('theme-transitioning');
+        }
+      });
+    return;
+  }
+
+  if (fadeTimer) clearTimeout(fadeTimer);
+  root.classList.add('theme-fade');
+  applyDarkMode(nextIsDark);
+  fadeTimer = setTimeout(() => {
+    root.classList.remove('theme-fade');
+    fadeTimer = null;
+  }, 360);
+}
