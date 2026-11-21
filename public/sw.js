@@ -1,37 +1,42 @@
-const CACHE_NAME = 'siakademik-pwa-v1';
-const urlsToCache = ['/', '/mahasiswa', '/prodi', '/profil', '/ganti-password'];
+const CACHE_NAME = 'siakademik-pwa-v2';
 
-// Event: Install Service Worker
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache);
-    })
-  );
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
-// Event: Activate Service Worker
+// Hapus semua cache versi lama
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+      )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Event: Fetch Interception
+// Network-first: data dari database selalu terbaru.
+// Request non-GET, /api, dan /_next tidak pernah di-cache/dicegat.
 self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/_next')) return;
+  if (request.mode === 'navigate') return; // halaman selalu dari server
+
+  // Hanya aset statis (ikon, gambar) yang di-cache
+  if (!/\.(png|jpg|jpeg|svg|ico|webp)$/.test(url.pathname)) return;
+
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((c) => c.put(request, copy));
+        return res;
+      })
+      .catch(() => caches.match(request))
   );
 });

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useUi } from '@/components/ui/UiProvider';
 import {
   Menu,
   User,
@@ -13,17 +14,29 @@ import {
 } from 'lucide-react';
 
 interface NavbarProps {
+  user: { nama_lengkap: string; email: string } | null;
   isMini: boolean;
   onToggleMini: () => void;
   onOpenMobile: () => void;
 }
 
 export default function Navbar({
+  user,
   isMini,
   onToggleMini,
   onOpenMobile,
 }: NavbarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { confirm: confirmDialog } = useUi();
+  const displayName = user?.nama_lengkap || 'Memuat...';
+  const displayEmail = user?.email || '';
+  const initials =
+    user?.nama_lengkap
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0]?.toUpperCase())
+      .join('') || '..';
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Tutup dropdown otomatis jika klik di luar komponen
@@ -41,7 +54,13 @@ export default function Navbar({
   }, []);
 
 const handleLogout = async () => {
-    if (confirm('Apakah Anda yakin ingin keluar dari aplikasi?')) {
+    if (
+      await confirmDialog({
+        title: 'Keluar dari aplikasi?',
+        message: 'Sesi Anda akan diakhiri dan Anda perlu login kembali.',
+        confirmText: 'Ya, Keluar',
+      })
+    ) {
       const csrfRes = await fetch('/api/auth/csrf').then((r) => r.json());
       await fetch('/api/auth/logout', {
         method: 'POST',
@@ -90,9 +109,9 @@ const handleLogout = async () => {
           className="flex min-h-[44px] items-center gap-2.5 rounded-full border border-slate-200 bg-slate-50 py-1.5 pr-3 pl-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-            AD
+            {initials}
           </div>
-          <span className="hidden sm:inline-block">Administrator</span>
+          <span className="hidden max-w-[160px] truncate sm:inline-block">{displayName}</span>
           <ChevronDown
             className={`h-4 w-4 text-slate-500 transition-transform duration-200 ${
               isDropdownOpen ? 'rotate-180' : ''
@@ -104,8 +123,8 @@ const handleLogout = async () => {
         {isDropdownOpen && (
           <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg ring-1 ring-black/5">
             <div className="border-b border-slate-100 px-4 py-2.5">
-              <p className="text-sm font-semibold text-slate-800">Administrator</p>
-              <p className="truncate text-xs text-slate-500">admin@akademik.ac.id</p>
+              <p className="truncate text-sm font-semibold text-slate-800">{displayName}</p>
+              <p className="truncate text-xs text-slate-500">{displayEmail}</p>
             </div>
 
             <div className="py-1">

@@ -1,9 +1,14 @@
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
+import { db } from '@/lib/db';
+import {
+  AUTH_SECRET as SECRET_KEY,
+  SESSION_COOKIE_NAME,
+  verifySessionValue,
+} from '@/lib/session';
 
+export { SESSION_COOKIE_NAME };
 export const CSRF_COOKIE_NAME = 'siakademik_csrf_token';
-export const SESSION_COOKIE_NAME = 'siakademik_session';
-const SECRET_KEY = process.env.AUTH_SECRET || 'siakademik-secret-key-2026-unnes';
 
 // Hash password dengan SHA-256 (sesuai fungsi SHA2(..., 256) di MySQL)
 export function hashPassword(password: string): string {
@@ -56,24 +61,24 @@ export function createSessionValue(userId: number, username: string): string {
 
 export async function getSessionUser(): Promise<{ userId: number; username: string } | null> {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  if (!sessionCookie) return null;
+  return verifySessionValue(cookieStore.get(SESSION_COOKIE_NAME)?.value);
+}
 
-  const [base64Payload, sig] = sessionCookie.split('.');
-  if (!base64Payload || !sig) return null;
+export interface CurrentUser {
+  id: number;
+  username: string;
+  nama_lengkap: string;
+  email: string;
+}
 
-  const expectedSig = crypto
-    .createHmac('sha256', SECRET_KEY)
-    .update(base64Payload)
-    .digest('base64url');
+// Ambil data lengkap user yang sedang login dari tabel users
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+  const session = await getSessionUser();
+  if (!session) return null;
 
-  if (sig !== expectedSig) return null;
-
-  try {
-    const data = JSON.parse(Buffer.from(base64Payload, 'base64url').toString('utf-8'));
-    if (Date.now() > data.exp) return null;
-    return { userId: data.userId, username: data.username };
-  } catch {
-    return null;
-  }
+  const [rows] = await db.query<any[]>(
+    'SELECT id, username, nama_lengkap, email FROM users WHERE id = ? LIMIT 1',
+    [session.userId]
+  );
+  return rows.length > 0 ? (rows[0] as CurrentUser) : null;
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useUi } from '@/components/ui/UiProvider';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -36,9 +37,16 @@ export default function Sidebar({
   onCloseMobile,
 }: SidebarProps) {
   const pathname = usePathname();
+  const { confirm: confirmDialog } = useUi();
 
 const handleLogout = async () => {
-    if (confirm('Apakah Anda yakin ingin keluar dari aplikasi?')) {
+    if (
+      await confirmDialog({
+        title: 'Keluar dari aplikasi?',
+        message: 'Sesi Anda akan diakhiri dan Anda perlu login kembali.',
+        confirmText: 'Ya, Keluar',
+      })
+    ) {
       const csrfRes = await fetch('/api/auth/csrf').then((r) => r.json());
       await fetch('/api/auth/logout', {
         method: 'POST',

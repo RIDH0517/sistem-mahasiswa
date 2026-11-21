@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import AppShell from '@/components/layout/AppShell';
+import UiProvider from '@/components/ui/UiProvider';
 
 export const metadata: Metadata = {
   title: 'SiAkademik - Sistem Informasi Mahasiswa',
@@ -16,16 +17,32 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className="antialiased">
-        <AppShell>{children}</AppShell>
+        <UiProvider>
+          <AppShell>{children}</AppShell>
+        </UiProvider>
         <script
           dangerouslySetInnerHTML={{
-            __html: `
+            __html:
+              process.env.NODE_ENV === 'production'
+                ? `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js').catch(function(err) {
                     console.log('SW registration failed: ', err);
                   });
                 });
+              }
+            `
+                : `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  regs.forEach(function(r) { r.unregister(); });
+                });
+                if (window.caches) {
+                  caches.keys().then(function(keys) {
+                    keys.forEach(function(k) { caches.delete(k); });
+                  });
+                }
               }
             `,
           }}

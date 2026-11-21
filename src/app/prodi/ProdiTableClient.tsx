@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUi } from '@/components/ui/UiProvider';
 import {
   Users,
   Search,
@@ -28,6 +29,7 @@ export default function ProdiTableClient({
   initialProdi: ProdiRow[];
 }) {
   const router = useRouter();
+  const { confirm: confirmDialog, toast } = useUi();
   const [csrfToken, setCsrfToken] = useState('');
   const [search, setSearch] = useState('');
 
@@ -89,6 +91,7 @@ export default function ProdiTableClient({
         setFormError(data.error || 'Gagal menyimpan prodi.');
       } else {
         setIsModalOpen(false);
+        toast('success', data.message || 'Data berhasil disimpan.');
         router.refresh();
       }
     } catch {
@@ -99,7 +102,12 @@ export default function ProdiTableClient({
   };
 
   const handleDelete = async (prodi: ProdiRow) => {
-    if (!confirm(`Hapus Program Studi ${prodi.kode_prodi} - ${prodi.nama_prodi}?`)) return;
+    const ok = await confirmDialog({
+      title: 'Hapus Program Studi?',
+      message: `${prodi.kode_prodi} - ${prodi.nama_prodi} akan dihapus permanen. Prodi yang masih memiliki mahasiswa tidak bisa dihapus.`,
+      confirmText: 'Ya, Hapus',
+    });
+    if (!ok) return;
 
     const res = await fetch('/api/prodi', {
       method: 'DELETE',
@@ -112,8 +120,9 @@ export default function ProdiTableClient({
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || 'Gagal menghapus prodi.');
+      toast('error', data.error || 'Gagal menghapus prodi.');
     } else {
+      toast('success', data.message || 'Program studi berhasil dihapus.');
       router.refresh();
     }
   };

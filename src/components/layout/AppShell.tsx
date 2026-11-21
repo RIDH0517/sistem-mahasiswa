@@ -13,6 +13,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isMini, setIsMini] = useState<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
+  const [user, setUser] = useState<{ nama_lengkap: string; email: string } | null>(null);
 
   useEffect(() => {
     try {
@@ -28,14 +29,33 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Cek sesi login setiap berpindah halaman
   useEffect(() => {
     if (pathname === '/login') return;
-    fetch('/api/auth/csrf')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.authenticated) {
-          router.replace('/login');
-        }
-      });
-  }, [pathname, router]);
+    let cancelled = false;
+
+    const loadUser = () =>
+      fetch('/api/auth/me', { cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (cancelled) return;
+          if (data?.authenticated) {
+            setUser(data.user);
+          } else if (data) {
+            router.replace('/login');
+          } else {
+            window.location.href = '/login';
+          }
+        })
+        .catch(() => {
+          // Abaikan error jaringan agar tidak memicu loop pengalihan
+        });
+
+    loadUser();
+    window.addEventListener('profile-updated', loadUser);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('profile-updated', loadUser);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const handleToggleMini = () => {
     setIsMini((prev) => {
@@ -65,6 +85,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Navbar
+          user={user}
           isMini={isMini}
           onToggleMini={handleToggleMini}
           onOpenMobile={() => setIsMobileOpen(true)}

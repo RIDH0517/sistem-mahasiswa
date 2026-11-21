@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUi } from '@/components/ui/UiProvider';
 import {
   Search,
   Users,
@@ -52,6 +53,7 @@ export default function MahasiswaTableClient({
   prodiOptions: ProdiOption[];
 }) {
   const router = useRouter();
+  const { confirm: confirmDialog, toast } = useUi();
   const [csrfToken, setCsrfToken] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProdi, setSelectedProdi] = useState<string>('ALL');
@@ -132,6 +134,7 @@ export default function MahasiswaTableClient({
         setFormError(data.error || 'Gagal menyimpan data.');
       } else {
         setIsModalOpen(false);
+        toast('success', data.message || 'Data berhasil disimpan.');
         router.refresh();
       }
     } catch {
@@ -142,7 +145,12 @@ export default function MahasiswaTableClient({
   };
 
   const handleDelete = async (mhs: MahasiswaRow) => {
-    if (!confirm(`Hapus mahasiswa ${mhs.nama} (${mhs.nim})?`)) return;
+    const ok = await confirmDialog({
+      title: 'Hapus Mahasiswa?',
+      message: `Data ${mhs.nama} (${mhs.nim}) akan dihapus permanen dan tidak bisa dikembalikan.`,
+      confirmText: 'Ya, Hapus',
+    });
+    if (!ok) return;
 
     const res = await fetch('/api/mahasiswa', {
       method: 'DELETE',
@@ -155,8 +163,9 @@ export default function MahasiswaTableClient({
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || 'Gagal menghapus mahasiswa');
+      toast('error', data.error || 'Gagal menghapus mahasiswa');
     } else {
+      toast('success', data.message || 'Mahasiswa berhasil dihapus.');
       router.refresh();
     }
   };
