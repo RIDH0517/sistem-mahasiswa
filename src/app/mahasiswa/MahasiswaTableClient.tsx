@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useUi } from '@/components/ui/UiProvider';
 import { fetchCsrfToken } from '@/lib/client-auth';
+import MahasiswaDetailDrawer from './MahasiswaDetailDrawer';
 import {
   Search,
   ArrowUpDown,
@@ -19,6 +20,7 @@ import {
   Download,
   RotateCcw,
   CheckSquare,
+  Eye,
 } from 'lucide-react';
 
 export interface MahasiswaRow {
@@ -31,6 +33,8 @@ export interface MahasiswaRow {
   prodi_id: number;
   nama_prodi: string;
   kode_prodi: string;
+  jenjang?: string;
+  created_at?: string | null;
 }
 
 export interface ProdiOption {
@@ -172,9 +176,10 @@ export default function MahasiswaTableClient({
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // State Seleksi Massal
+  // State Seleksi Massal & Quick View Drawer
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [viewingId, setViewingId] = useState<number | null>(null);
 
   const existingIdSet = useMemo(() => new Set(initialData.map((m) => m.id)), [initialData]);
   const activeSelectedIds = useMemo(
@@ -286,6 +291,7 @@ export default function MahasiswaTableClient({
         toast('error', data.error || 'Gagal menghapus mahasiswa');
       } else {
         setSelectedIds((prev) => prev.filter((id) => id !== mhs.id));
+        setViewingId((prev) => (prev === mhs.id ? null : prev));
         toast('success', data.message || 'Mahasiswa berhasil dihapus.');
         router.refresh();
       }
@@ -384,6 +390,27 @@ export default function MahasiswaTableClient({
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (safeCurrentPage - 1) * pageSize;
   const paginatedData = filteredAndSortedData.slice(startIndex, startIndex + pageSize);
+
+  const viewingIndex =
+    viewingId !== null ? filteredAndSortedData.findIndex((m) => m.id === viewingId) : -1;
+  const viewingItem =
+    viewingIndex >= 0
+      ? filteredAndSortedData[viewingIndex]
+      : viewingId !== null
+        ? (initialData.find((m) => m.id === viewingId) ?? null)
+        : null;
+
+  const handleCloseDrawer = useCallback(() => setViewingId(null), []);
+  const handlePrevDrawer = useCallback(() => {
+    if (viewingIndex > 0) {
+      setViewingId(filteredAndSortedData[viewingIndex - 1].id);
+    }
+  }, [viewingIndex, filteredAndSortedData]);
+  const handleNextDrawer = useCallback(() => {
+    if (viewingIndex >= 0 && viewingIndex < filteredAndSortedData.length - 1) {
+      setViewingId(filteredAndSortedData[viewingIndex + 1].id);
+    }
+  }, [viewingIndex, filteredAndSortedData]);
 
   const allPageSelected =
     paginatedData.length > 0 && paginatedData.every((m) => selectedIdSet.has(m.id));
@@ -775,17 +802,21 @@ export default function MahasiswaTableClient({
                         aria-label={`Pilih ${mhs.nama}`}
                         className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-accent dark:border-slate-600"
                       />
-                      <div className="min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setViewingId(mhs.id)}
+                        className="group min-w-0 flex-1 text-left focus:outline-none"
+                      >
                         <p className="font-mono text-xs font-semibold text-slate-500 tabular-nums dark:text-slate-400">
                           {mhs.nim}
                         </p>
-                        <h3 className="mt-0.5 truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                        <h3 className="mt-0.5 truncate text-sm font-bold text-slate-900 transition-colors group-hover:text-accent-text group-hover:underline dark:text-slate-100">
                           {mhs.nama}
                         </h3>
                         <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                           {mhs.email}
                         </p>
-                      </div>
+                      </button>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -930,12 +961,18 @@ export default function MahasiswaTableClient({
                           {mhs.nim}
                         </td>
                         <td className="px-5 py-3.5">
-                          <div className="font-semibold text-slate-900 dark:text-slate-100">
-                            {mhs.nama}
-                          </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
-                            {mhs.email}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setViewingId(mhs.id)}
+                            className="group block max-w-full text-left focus:outline-none"
+                          >
+                            <div className="font-semibold text-slate-900 transition-colors group-hover:text-accent-text group-hover:underline dark:text-slate-100">
+                              {mhs.nama}
+                            </div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              {mhs.email}
+                            </div>
+                          </button>
                         </td>
                         <td className="px-5 py-3.5">
                           <span
@@ -963,6 +1000,15 @@ export default function MahasiswaTableClient({
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <div className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setViewingId(mhs.id)}
+                              aria-label={`Lihat detail ${mhs.nama}`}
+                              title="Lihat Detail"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 hover:text-accent-text dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => openEditModal(mhs)}
@@ -1025,6 +1071,35 @@ export default function MahasiswaTableClient({
           </div>
         </div>
       )}
+
+      {/* Quick View / Detail Drawer Mahasiswa */}
+      <MahasiswaDetailDrawer
+        mahasiswa={viewingItem}
+        prodiBadgeClass={
+          viewingItem
+            ? PRODI_BADGE_STYLES[viewingItem.kode_prodi] ||
+              'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+            : ''
+        }
+        hasPrev={viewingIndex > 0}
+        hasNext={viewingIndex >= 0 && viewingIndex < filteredAndSortedData.length - 1}
+        onPrev={handlePrevDrawer}
+        onNext={handleNextDrawer}
+        onClose={handleCloseDrawer}
+        onEdit={(mhs) => {
+          setViewingId(null);
+          openEditModal(mhs);
+        }}
+        onDelete={handleDelete}
+        onFilterProdi={(kodeProdi) => {
+          updateUrlParams({ prodi: kodeProdi, page: 1 });
+          setViewingId(null);
+        }}
+        onFilterAngkatan={(angkatan) => {
+          updateUrlParams({ angkatan: String(angkatan), page: 1 });
+          setViewingId(null);
+        }}
+      />
 
       {/* Modal Form Tambah / Edit Mahasiswa */}
       {isModalOpen && (

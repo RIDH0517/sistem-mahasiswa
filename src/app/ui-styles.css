@@ -727,6 +727,13 @@
     will-change: transform;
   }
 
+  .ui-drawer-backdrop {
+    animation: ui-fade-in 200ms ease-out both;
+  }
+  .ui-drawer-panel {
+    animation: ui-slide-in-right 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .ui-card,
     .ui-input,
@@ -749,6 +756,8 @@
     .login-drift-c,
     .login-drift-d,
     .login-spin-slow,
+    .ui-drawer-backdrop,
+    .ui-drawer-panel,
     .login-badge-shimmer::after {
       animation: none;
     }
@@ -913,5 +922,25 @@ html.theme-fade *::after {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes ui-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translate3d(28px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
